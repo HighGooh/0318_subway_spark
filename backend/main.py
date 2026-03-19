@@ -64,3 +64,28 @@ def read_root(fileName:str):
     return {"status": True, "data": result}
   except Exception as e:
     return {"status": False, "error": str(e)}
+
+@app.get('/fromdb')
+def drunk():
+  if not spark:
+    return {"status": False, "error": "Spark session not initialized"}
+  try:
+    engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/edu')
+    inspector = inspect(engine_mariadb)
+    tables = inspector.get_table_names()
+    print(tables)
+    sql = text("select * from seoul_metro where `날짜` like '2011%'")
+    result = pd.read_sql_query(sql, engine_mariadb)
+    spDf = spark.createDataFrame(result)
+    spDf.createOrReplaceTempView("drunkTable")
+    sql1 = """
+      select *
+      from drunkTable
+      limit 10;
+      """
+    fIdDf = spark.sql(sql1)
+    print(fIdDf.show())
+    result = spDf.limit(50).toPandas().to_dict(orient="records")
+    return {"status": True, "data": result}
+  except Exception as e:
+    return {"status": False, "error": str(e)}
