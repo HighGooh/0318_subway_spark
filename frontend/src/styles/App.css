@@ -29,19 +29,19 @@
   top: none;
 }
 
-.input_box.active {
+/* .input_box.active {
   width: 100%;
   position: absolute;
   top : 50%;
   transform: translateY(-50%);
-}
+} */
 
 .input_box h3 {
   text-align: center;
   margin-bottom: 30px;
 }
 
-.loading_box .loading_chat span {
+.loading_chat span {
   animation-name: loading;          
   animation-duration: 1.5s;           
   animation-timing-function: ease;  
@@ -51,10 +51,10 @@
   padding: 0 2px;
 }
 
-.loading_box .loading_chat span:nth-of-type(2) {
+.loading_chat span:nth-of-type(2) {
   animation-delay: .2s;
 }
-.loading_box .loading_chat span:nth-of-type(3) {
+.loading_chat span:nth-of-type(3) {
   animation-delay: .4s;
 }
 
