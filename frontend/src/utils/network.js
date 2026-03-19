@@ -1,7 +1,7 @@
 import axios from "axios"
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_APP_N8N_URL || "http://aiedu.tplinkdns.com:6010",
+  baseURL: import.meta.env.VITE_APP_N8N_URL || "http://aiedu.tplinkdns.com:7240",
   // withCredentials: true,
   headers: {
     "Content-Type": "application/json",

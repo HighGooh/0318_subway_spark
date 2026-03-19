@@ -4,8 +4,20 @@ from fastapi import FastAPI
 import pandas as pd
 from settings import settings
 import os
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 spark = None
 
@@ -14,7 +26,7 @@ def startup_event():
   global spark
   try:
     spark = SparkSession.builder \
-      .appName("mySparkApp") \
+      .appName("mySparkApp_jh") \
       .master(settings.spark_url) \
       .config("spark.driver.host", settings.host_ip) \
       .config("spark.driver.bindAddress", "0.0.0.0") \
@@ -59,7 +71,7 @@ def read_root(fileName:str):
 
 
 @app.get('/year_select')
-def year_select(year:int):
+def year_select(year:str):
   if not spark:
     return {"status": False, "error": "Spark session not initialized"}
   try:
@@ -71,7 +83,7 @@ def year_select(year:int):
     print(sql)
     result = pd.read_sql_query(sql, engine_mariadb)
     spDf = spark.createDataFrame(result)
-    spDf.createOrReplaceTempView("drunkTable")
+    spDf.createOrReplaceTempView("jhYearTable")
     
     return {"status": True}
   except Exception as e:
@@ -85,7 +97,7 @@ def drunk_info():
         SELECT
           `역명`,
           Floor(AVG(CAST(`20~21` AS INT) + CAST(`21~22` AS INT) + CAST(`22~23` AS INT)), 0) AS `night_avg`
-        FROM drunkTable
+        FROM jhYearTable
         WHERE `주말여부` = 1
           OR DAYOFWEEK(CAST(`날짜` AS DATE)) = 6
         GROUP BY `역명`
