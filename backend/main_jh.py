@@ -52,36 +52,50 @@ def read_root(fileName:str):
     fIdDf = spark.sql(sql1)
     print(fIdDf.show())
 
-
-
-
     result = spDf.limit(50).toPandas().to_dict(orient="records")
     return {"status": True, "data": result}
   except Exception as e:
     return {"status": False, "error": str(e)}
 
 
-@app.get('/drunk')
-def drunk():
+@app.get('/year_select')
+def year_select(year:int):
   if not spark:
     return {"status": False, "error": "Spark session not initialized"}
   try:
-    engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/edu')
+    engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/metro_db')
     inspector = inspect(engine_mariadb)
     tables = inspector.get_table_names()
     print(tables)
-    sql = text("select * from seoul_metro where `날짜` like '2011%'")
+    sql = text(f"select * from seoul_metro where `날짜` like '{year}%'")
+    print(sql)
     result = pd.read_sql_query(sql, engine_mariadb)
     spDf = spark.createDataFrame(result)
     spDf.createOrReplaceTempView("drunkTable")
-    sql1 = """
-      select *
-      from drunkTable
-      limit 10;
-      """
-    fIdDf = spark.sql(sql1)
-    print(fIdDf.show())
-    result = spDf.limit(50).toPandas().to_dict(orient="records")
-    return {"status": True, "data": result}
+    
+    return {"status": True}
   except Exception as e:
     return {"status": False, "error": str(e)}
+  
+
+@app.get('/drunk_info')
+def drunk_info():
+  try:
+    sql1 = """
+        SELECT
+          `역명`,
+          Floor(AVG(CAST(`20~21` AS INT) + CAST(`21~22` AS INT) + CAST(`22~23` AS INT)), 0) AS `night_avg`
+        FROM drunkTable
+        WHERE `주말여부` = 1
+          OR DAYOFWEEK(CAST(`날짜` AS DATE)) = 6
+        GROUP BY `역명`
+        ORDER BY night_avg DESC
+        LIMIT 10
+        """
+    fIdDf = spark.sql(sql1)
+    result_data = fIdDf.toPandas().to_dict(orient="records")
+    return {"status": True, "data": result_data}
+  except Exception as e:
+    return {"status": False, "error": str(e)}
+
+  
