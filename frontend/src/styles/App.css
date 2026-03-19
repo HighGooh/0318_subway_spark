@@ -1,42 +1,71 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.container-fluid {
+  padding: 0 !important;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.chat_box {
+  animation-name: slideIn;          
+  animation-duration: .5s;           
+  animation-timing-function: ease;  
+  animation-iteration-count: initial; 
+  overflow-anchor: auto;
+  position: relative;
 }
 
-@keyframes logo-spin {
+@keyframes slideIn {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    top: 50px;
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    top: 0;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.input_box {
+  transition: .2s;  
+  height: auto;
+  position: relative;
+  top: none;
+}
+
+.input_box.active {
+  width: 100%;
+  position: absolute;
+  top : 50%;
+  transform: translateY(-50%);
+}
+
+.input_box h3 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.loading_box .loading_chat span {
+  animation-name: loading;          
+  animation-duration: 1.5s;           
+  animation-timing-function: ease;  
+  animation-iteration-count: infinite; 
+  overflow-anchor: auto;
+  position: relative;
+  padding: 0 2px;
+}
+
+.loading_box .loading_chat span:nth-of-type(2) {
+  animation-delay: .2s;
+}
+.loading_box .loading_chat span:nth-of-type(3) {
+  animation-delay: .4s;
+}
+
+@keyframes loading {
+  0% {
+    top: 0;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+  25% {
+    top: -3px;
+  }
+  50% {
+    top: 0;
+  }
 }
