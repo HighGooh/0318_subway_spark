@@ -92,7 +92,7 @@ def fromdb(year: str):
     result.columns = result.columns.str.strip()
 
     # 역명에서 (역번호)만 제거하는 로직 추가
-    result['역명'] = result['역명'].apply(lambda x: re.sub(r"\(\d{3,}\)", "", str(x)).strip())
+    result['역명'] = result['역명'].apply(lambda x: re.sub(r"\(\d{1,}\)", "", str(x)).strip())
 
     spDf = spark.createDataFrame(result)
     spDf.createOrReplaceTempView(f"analysis_{year}")
@@ -269,28 +269,70 @@ def get_station_history(station_name: str):
     engine_flow = create_engine(DB_URL_FLOW)
     try:
         with engine_flow.connect() as conn:
-            # 1단계: 2024년 데이터에서 해당 이름의 역번호 찾기
-            code_query = text("""
-                SELECT `역번호`, `역명` 
+           # 1단계: 2024년 데이터에서 검색어와 관련된 역명 후보들을 가져옴
+            # ORDER BY를 통해 검색어와 정확히 일치하는 이름이 가장 위(첫 번째)로 오게 함
+            # 예: "동대문" 검색 시 "동대문"이 "동대문역사문화공원"보다 먼저 선택됨
+            search_query = text("""
+                SELECT DISTINCT `역명` 
                 FROM `metro_flow_2024` 
-                WHERE `역명` LIKE :name 
+                WHERE `역명` LIKE :name
+                ORDER BY (CASE WHEN `역명` = :raw_name THEN 0 ELSE 1 END), LENGTH(`역명`) ASC
                 LIMIT 1
             """)
-            code_res = conn.execute(code_query, {"name": f"%{station_name}%"}).fetchone()
             
-            if not code_res:
+            # LIKE 검색용(% 포함)과 정확한 비교용(raw)을 따로 넘김
+            search_res = conn.execute(search_query, {
+                "name": f"%{station_name}%", 
+                "raw_name": station_name
+            }).fetchone()
+            
+            if not search_res:
                 return {"status": False, "error": "역을 찾을 수 없습니다."}
+            
+            # 우리가 최종적으로 결정한 '정확한 대표 이름'
+            official_name = search_res[0]
 
-            # 2단계: 통합 뷰에서 해당 역번호 히스토리 조회
+            # 2단계: 결정된 'official_name'을 사용하는 모든 역번호(환승역) 리스트 확보
+            # 이제 LIKE가 아니라 '='을 써서 "동대문"과 "동대문역사문화공원"을 철저히 분리함
+            code_query = text("""
+                SELECT DISTINCT `역번호` 
+                FROM `metro_flow_2024` 
+                WHERE `역명` = :name
+            """)
+            code_res = conn.execute(code_query, {"name": official_name}).fetchall()
+            target_codes = [r[0] for r in code_res]
+
+            # 3단계: 통합 뷰에서 '해당 번호들 전체'를 연도별로 SUM(합산)하여 조회합니다.
+            # IN 연산자를 사용하여 여러 역번호의 데이터를 한꺼번에 가져옵니다.
             history_query = text("""
-                SELECT *
+                SELECT 
+                    `연도`,
+                    -- 여러 호선(번호)의 인원수를 합산하여 실제 그 지역의 총 규모를 계산
+                    SUM(`출근_승차합`) as `출근_승차합`,
+                    SUM(`출근_하차합`) as `출근_하차합`,
+                    SUM(`퇴근_승차합`) as `퇴근_승차합`,
+                    SUM(`퇴근_하차합`) as `퇴근_하차합`,
+                    -- 합산된 인원수로 비율을 다시 계산 (이게 진짜 그 역의 성격입니다)
+                    ROUND(SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0), 2) AS `출근_하차비율`,
+                    ROUND(SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0), 2) AS `출근_승차비율`,
+                    -- 성격도 합산된 지표로 재판정
+                    CASE 
+                        WHEN (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 2.0 AND SUM(`퇴근_승차합`) / NULLIF(SUM(`퇴근_하차합`), 0) >= 1.3)
+                             OR (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 4.0) THEN '오피스'
+                        WHEN (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 2.0 AND SUM(`퇴근_하차합`) / NULLIF(SUM(`퇴근_승차합`), 0) >= 1.3)
+                             OR (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 4.0) THEN '주거단지'
+                        ELSE '상업/복합'
+                    END AS `역성격`
                 FROM `v_metro_analysis_all`
-                WHERE `역번호` = :code
+                WHERE `역번호` IN :codes
+                GROUP BY `연도`
                 ORDER BY `연도` ASC
             """)
-            df = pd.read_sql_query(history_query, conn, params={"code": code_res[0]})
             
-        return {"status": True, "station_name": code_res[1], "station_code": code_res[0], "data": df.to_dict(orient="records")}
+            # 파라미터 전달 시 리스트 형식을 그대로 넘깁니다.
+            df = pd.read_sql_query(history_query, conn, params={"codes": target_codes})
+
+        return {"status": True, "station_name": official_name, "station_code": target_codes, "data": df.to_dict(orient="records")}
     except Exception as e:
         return {"status": False, "error": str(e)}
     
@@ -309,12 +351,21 @@ def get_map_summary(year: str):
 def get_ranking(year: str, category: str):
     # 연도별/성격별 TOP 10 랭킹
     engine_flow = create_engine(DB_URL_FLOW)
-    sort_col = "`출근_하차비율`" if category == '오피스' else "`출근_승차비율`"
+    # 성격에 따른 정렬 기준 (합산된 SUM 값을 기준으로 계산)
+    sort_logic = "SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0)" if category == '오피스' else "SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0)"
     try:
-        df = pd.read_sql_query(text(f"""
-            SELECT `역명`, {sort_col} as `ratio` FROM `v_metro_analysis_all` 
-            WHERE `연도` = :year AND `역성격` = :cat ORDER BY {sort_col} DESC LIMIT 10
-        """), engine_flow, params={"year": year, "cat": category})
+        # 뷰에서 데이터를 가져온 뒤 '역명'으로 묶어 인원수를 합산하고 비율을 다시 계산합니다.
+        query = text(f"""
+            SELECT 
+                `역명`, 
+                ROUND({sort_logic}, 2) as `ratio`
+            FROM `v_metro_analysis_all` 
+            WHERE `연도` = :year AND `역성격` = :cat 
+            GROUP BY `역명` 
+            ORDER BY `ratio` DESC 
+            LIMIT 10
+        """)
+        df = pd.read_sql_query(query, engine_flow, params={"year": year, "cat": category})
         return {"status": True, "data": df.to_dict(orient="records")}
     except Exception as e:
         return {"status": False, "error": str(e)}
