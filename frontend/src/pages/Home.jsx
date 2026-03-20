@@ -1,72 +1,91 @@
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '@styles/App.css'; // 커스텀 스타일 유지용
 
-function Home() {
-  const navigate = useNavigate();
+const App = () => {
+  const [activeTab, setActiveTab] = useState('전체');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const teamMembers = [
-    { name: `서울교통공사 데이터와ai-agent의 활용`, path: "/jh", color: "#3b82f6", desc: "프론트엔드 담당" },
-    { name: "팀원 B", path: "/member-b", color: "#a855f7", desc: "UI 디자인 담당" },
-    { name: "팀원 C", path: "/member-c", color: "#f97316", desc: "백엔드 담당" }
+  const portfolioItems = [
+    { id: 1, title: 'Ji hwan', type: 'UX/UI', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-heart', link: '/jh' },
+    { id: 2, title: 'Yun Woo', type: 'AI Agent', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-robot', link: '#' },
+    { id: 3, title: 'Ga young', type: 'Video', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정/ 코로나 전후 이용객 평균 계산)', icon: 'fa-video', link: '#' },
   ];
 
-  // 스타일 객체
-  const containerStyle = {
-    minHeight: "100vh",
-    backgroundColor: "#fff", // 어두운 배경
-    color: "#fff",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily: "sans-serif",
-    padding: "20px"
-  };
+  const tabs = ['전체', 'UX/UI', 'AI Agent', 'Video', 'Study'];
 
-  const cardContainerStyle = {
-    display: "flex",
-    gap: "20px",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    marginTop: "40px"
-  };
-
-  const cardStyle = (color) => ({
-    backgroundColor: "#2a528a",
-    border: `2px solid ${color}`,
-    borderRadius: "15px",
-    padding: "30px",
-    width: "250px",
-    textAlign: "center",
-    cursor: "pointer",
-    transition: "transform 0.2s"
+  const filteredItems = portfolioItems.filter(item => {
+    const matchesTab = activeTab === '전체' || item.type === activeTab;
+    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesTab && matchesSearch;
   });
 
   return (
-      <div className={`container-fluid vh-100 d-flex flex-column bg-white `}>
-      {/* 헤더 */}
-      
-    <div style={containerStyle}>
-      <h1 style={{ fontSize: "3rem", fontWeight: "bold", marginBottom: "10px", color: '#333'}}>TEAM 4</h1>
-      <p style={{ color: "#9ca3af" }}>우리 팀원들의 페이지로 이동하세요</p>
-
-      <div style={cardContainerStyle}>
-        {teamMembers.map((member, i) => (
-          <div 
-            key={i} 
-            style={cardStyle(member.color)}
-            onClick={() => navigate(member.path)}
-            onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.05)"}
-            onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
-          >
-            <h2 style={{ fontSize: "1.5rem", marginBottom: "10px" }}>{member.name}</h2>
-            <p style={{ fontSize: "0.9rem", color: "#d1d5db" }}>{member.desc}</p>
-            <div style={{ marginTop: "20px", color: member.color, fontWeight: "bold" }}>구경가기 →</div>
+    <div className="bg-light py-5">
+      <div className="container bg-white shadow-sm p-4 p-md-5 rounded-4" style={{ maxWidth: '1140px' }}>
+        
+        {/* Header Section */}
+        <header className="mb-5">
+          <div className="d-flex align-items-center mb-2">
+            <i className="fas fa-folder fa-2x text-primary"></i>
+            <h1 className="fw-bold m-0">Team4's <span className="text-primary">Spark 활용 </span>Project</h1>
           </div>
-        ))}
+          <p className="text-secondary small mb-4">팀 프로젝트 결과물을 확인해보실 수 있습니다.</p>
+          
+          {/* Search Bar */}
+          <div className="input-group mb-4 bg-light rounded-3 p-2">
+            <span className="input-group-text bg-transparent border-0">
+              <i className="fas fa-search text-muted"></i>
+            </span>
+            <input 
+              type="text" 
+              className="form-control bg-transparent border-0 shadow-none" 
+              placeholder="자료 검색..." 
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filter Tabs */}
+          <nav className="nav nav-pills bg-light p-1 rounded-3">
+            {tabs.map(tab => (
+              <button 
+                key={tab}
+                className={`nav-link flex-fill border-0 fw-medium ${activeTab === tab ? 'bg-white text-dark shadow-sm active' : 'text-secondary'}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </nav>
+        </header>
+
+        {/* Grid Layout (Bootstrap Grid) */}
+        <main className="row g-4">
+          {filteredItems.map(item => (
+            <div key={item.id} className="col-12 col-md-6 col-lg-4">
+              <a href={item.link} className="card h-100 border-light-subtle text-decoration-none p-4 custom-card">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <span className="text-secondary small d-flex align-items-center gap-2">
+                    <i className={`fas ${item.icon}`}></i> {item.type}
+                  </span>
+                  <span className="text-body-tertiary small">{item.date}</span>
+                </div>
+                <div className="card-body p-0">
+                  <h3 className="h5 fw-bold text-dark mb-2">{item.title}</h3>
+                  <p className="text-secondary small mb-4">{item.desc}</p>
+                </div>
+                <div className="mt-auto">
+                  <span className="text-primary fw-semibold small d-flex align-items-center gap-1">
+                    <i className="fas fa-link"></i> 자료 열기
+                  </span>
+                </div>
+              </a>
+            </div>
+          ))}
+        </main>
       </div>
     </div>
-    </div>
   );
-}
+};
 
-export default Home;
+export default App;

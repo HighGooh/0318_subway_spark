@@ -6,7 +6,7 @@ const Nav = () => {
 
     return(
         <header className="p-3 border-bottom bg-white sticky-top">
-            <h5 className="mb-0 fw-bold text-primary" onClick={()=>navigate('/')} style={{cursor: 'pointer'}}>team4</h5>
+            <h5 className="mb-0 fw-bold text-primary" onClick={()=>navigate('/')} style={{cursor: 'pointer'}}>Team4</h5>
         </header>
       )
 }
