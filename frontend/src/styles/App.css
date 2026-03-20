@@ -3,10 +3,10 @@
 }
 
 .chat_box {
-  animation-name: slideIn;          
-  animation-duration: .5s;           
-  animation-timing-function: ease;  
-  animation-iteration-count: initial; 
+  animation-name: slideIn;
+  animation-duration: .5s;
+  animation-timing-function: ease;
+  animation-iteration-count: initial;
   overflow-anchor: auto;
   position: relative;
 }
@@ -16,6 +16,7 @@
     opacity: 0;
     top: 50px;
   }
+
   to {
     opacity: 1;
     top: 0;
@@ -23,7 +24,7 @@
 }
 
 .input_box {
-  transition: .2s;  
+  transition: .2s;
   height: auto;
   position: relative;
   top: none;
@@ -42,10 +43,10 @@
 }
 
 .loading_chat span {
-  animation-name: loading;          
-  animation-duration: 1.5s;           
-  animation-timing-function: ease;  
-  animation-iteration-count: infinite; 
+  animation-name: loading;
+  animation-duration: 1.5s;
+  animation-timing-function: ease;
+  animation-iteration-count: infinite;
   overflow-anchor: auto;
   position: relative;
   padding: 0 2px;
@@ -54,6 +55,7 @@
 .loading_chat span:nth-of-type(2) {
   animation-delay: .2s;
 }
+
 .loading_chat span:nth-of-type(3) {
   animation-delay: .4s;
 }
@@ -62,9 +64,11 @@
   0% {
     top: 0;
   }
+
   25% {
     top: -3px;
   }
+
   50% {
     top: 0;
   }
@@ -80,33 +84,59 @@
 
 /* 기본 변수 및 폰트 */
 :root {
-    --primary-color: #3b82f6;
+  --primary-color: #3b82f6;
 }
 
 body {
-    font-family: 'Pretendard', sans-serif;
+  font-family: 'Pretendard', sans-serif;
 }
 
 /* 카드 호버 효과 - 부트스트랩 클래스 외 커스텀 추가 */
 .custom-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 12px;
 }
 
 .custom-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* 탭 버튼 커스텀 */
 .nav-pills .nav-link.active {
-    color: #1e293b !important;
+  color: #1e293b !important;
 }
 
 /* 반응형 모바일 대응 */
 @media (max-width: 768px) {
-    .container {
-        border-radius: 0;
-        margin: 0;
-    }
+  .container {
+    border-radius: 0;
+    margin: 0;
+  }
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  /* 크롬, 사파리, 오페라, 엣지 */
+
+}
+
+
+.station_btn:hover {
+  background: #d1d1d1 !important;
+}
+
+.content_box {
+  display: flex !important;
+}
+
+
+@media screen and (max-width: 990px) {
+  .content_box {
+    display: block !important;
+  }
+
+  .center_bar {
+    display: none;
+  }
 }
