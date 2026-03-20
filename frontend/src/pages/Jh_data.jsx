@@ -9,6 +9,12 @@ import 'highlight.js/styles/github.css'; // 테마 선택
 
 const Jh_data = () => {
 
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleSideBar = () => {
+    setIsOpen(!isOpen);
+  };
+
   const [messages, setMessages] = useState([
     { role: "bot", content: "어느 역의 맛집을 추천해드릴까요?" },
   ]);
@@ -67,7 +73,7 @@ const Jh_data = () => {
     searchDrunkList()
   }
 
-   const Send = (e) => {
+  const Send = (e) => {
     e.preventDefault()
     console.log(input)
     if (!input.trim()) return;
@@ -114,51 +120,80 @@ const Jh_data = () => {
 
   return (
     <>
-      <form onSubmit={(e) => { yearSubmit(e); setYearLoad(true); setSubWaySel(false) }}>
-        <h3 className="text-center mt-5 mb-3">활용하고 싶은 연도를 선택해주세요</h3>
-        <div style={{ maxWidth: "700px", margin: "0 auto" }} className="d-flex">
-          <select name="year" className="form-select" aria-label="팀원 선택" onChange={(e) => setYearSel(e.target.value)} disabled={yearLoad}>
-            {
-              option.map((v, i) => (
-                <option key={i} value={v}>{v}년도</option>
-              ))
-            }
-          </select>
-          <button type='submit' className="btn btn-primary text-white fw-bold text-decoration-none" style={{ width: "100px", margin: "0 0 0 20px" }} disabled={yearLoad}>선택</button>
-        </div>
-        <p className={`loading_chat  ${yearLoad ? "" : "d-none"} text-center mt-3`}>데이터를 수집 중 <span>•</span><span>•</span><span>•</span></p>
-      </form>
-      <div className={`${subWaySel ? "" : "d-none"}`} style={{ maxWidth: "700px", margin: "50px auto" }}>
-        <button style={{background: "#f5f5f5" }} className="btn text-black text-decoration-none " onClick={() => setDrunkSearch(1)}>맛있는 술집 추천</button>
-      </div>
-      <div className={`${drunkSearch === 1 ? "" : "d-none"} p-5`} style={{ maxWidth: "1200px", margin: "50px auto", border: "1px solid #d1d1d1" }}>
-        <div className="d-flex justify-content-center align-items-center">
-          <p className="mb-0">서울교통공사 데이터를 기반으로 한 주말/저녁시간 번화가 데이터 수집</p>
-          <button className="btn btn-primary text-white fw-bold text-decoration-none ms-3" onClick={() => { DrunkLoad() }}>데이터 수집</button>
-        </div>
-        <p className={`loading_chat  ${drunkLoad ? "" : "d-none"} text-center mt-3`}>데이터를 수집 중 <span>•</span><span>•</span><span>•</span></p>
-        <form className="d-flex justify-content-evenly mt-5 mb-5 flex-wrap" onSubmit={Send}>
-          {
-            drunkList &&
-            drunkList?.map((v, i) => (
-              <button style={{background: "#f5f5f5" }} className="btn text-black text-decoration-none "  key={i} onClick={(e) => { setInput(e.target.innerText)}} disabled={inputLoad}>{String(v['역명']) }</button>
-            ))
-          }
-        </form>
+      <div className="bg-light py-5">
+        <div className="container bg-white shadow-sm p-4 p-md-5 rounded-4" style={{ maxWidth: '1140px' }}>
+          <form onSubmit={(e) => { yearSubmit(e); setYearLoad(true); setSubWaySel(false) }}>
+            <h3 className="text-center mt-5 mb-3">활용하고 싶은 연도를 선택해주세요</h3>
+            <div style={{ maxWidth: "700px", margin: "0 auto" }} className="d-flex">
+              <select name="year" className="form-select" aria-label="팀원 선택" onChange={(e) => setYearSel(e.target.value)} disabled={yearLoad}>
+                {
+                  option.map((v, i) => (
+                    <option key={i} value={v}>{v}년도</option>
+                  ))
+                }
+              </select>
+              <button type='submit' className="btn btn-primary text-white fw-bold text-decoration-none" style={{ width: "100px", margin: "0 0 0 20px" }} disabled={yearLoad}>선택</button>
+            </div>
+            <p className={`loading_chat  ${yearLoad ? "" : "d-none"} text-center mt-3`}>데이터를 수집 중 <span>•</span><span>•</span><span>•</span></p>
+          </form>
+          <div className={`${subWaySel ? "" : "d-none"}`} style={{ maxWidth: "700px", margin: "50px auto" }}>
+            <button style={{ background: "#f5f5f5" }} className="btn text-black text-decoration-none " onClick={() => setDrunkSearch(1)}>맛있는 술집 추천</button>
+          </div>
+          <div className={`${drunkSearch === 1 ? "" : "d-none"} p-5`} style={{ maxWidth: "1200px", margin: "50px auto", border: "1px solid #d1d1d1" }}>
+            <div className="d-flex justify-content-center align-items-center">
+              <p className="mb-0">서울교통공사 데이터를 기반으로 한 주말/저녁시간 번화가 데이터 수집</p>
+              <button className="btn btn-primary text-white fw-bold text-decoration-none ms-3" onClick={() => { DrunkLoad() }}>데이터 수집</button>
+            </div>
+            <p className={`loading_chat  ${drunkLoad ? "" : "d-none"} text-center mt-3`}>데이터를 수집 중 <span>•</span><span>•</span><span>•</span></p>
+            <form className="d-flex justify-content-evenly mt-5 mb-5 flex-wrap" onSubmit={Send}>
+              {
+                drunkList &&
+                drunkList?.map((v, i) => (
+                  <button style={{ background: "#f5f5f5" }} className="btn text-black text-decoration-none " key={i} onClick={(e) => { setInput(e.target.innerText) }} disabled={inputLoad}>{String(v['역명'])}</button>
+                ))
+              }
+            </form>
 
-          {/* ai-agent */}
-        <div style={{ maxHeight: '500px', overflowY: 'auto' }} className={`container-fluid d-flex flex-column bg-white ${startBool ? "" : "d-none"}`}>
+            {/* ai-agent */}
+            <div style={{ maxHeight: '500px', overflowY: 'auto' }} className={`container-fluid d-flex flex-column bg-white ${startBool ? "" : "d-none"}`}>
 
-          {/* 채팅 내역 (말풍선 영역) */}
-          <div className={`flex-grow-1 overflow-auto p-4 bg-light shadow-sm`}>
-            <div className="container" style={{ maxWidth: "700px" }}>
+              {/* 채팅 내역 (말풍선 영역) */}
+              <div className={`flex-grow-1 overflow-auto p-4 bg-light shadow-sm`}>
+                <div className="container" style={{ maxWidth: "700px" }}>
 
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`d-flex mb-4 chat_box ${msg.role === "user" ? "justify-content-end" : "justify-content-start"} `}>
-                  {/* AI 아이콘 (왼쪽 답변일 때만 표시) */}
-                  {msg.role === "bot" && (
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`d-flex mb-4 chat_box ${msg.role === "user" ? "justify-content-end" : "justify-content-start"} `}>
+                      {/* AI 아이콘 (왼쪽 답변일 때만 표시) */}
+                      {msg.role === "bot" && (
+                        <div className="me-2 mt-1">
+                          <div
+                            className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                            style={{ width: "30px", height: "30px", fontSize: "12px" }}>
+                            AI
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 말풍선 본체 */}
+                      <div
+                        className={`p-3 shadow-sm ${msg.role === "user"
+                          ? "bg-primary text-white rounded-start-4 rounded-top-4" // 사용자
+                          : "bg-white text-dark border rounded-end-4 rounded-top-4" // AI
+                          }`}
+                        style={{ maxWidth: "75%", fontSize: "0.95rem" }}
+                      >
+                        <div className="fw-bold mb-1 small" style={{ opacity: 0.8 }}>
+                          {msg.role === "user" ? "나" : "gemma"}
+                        </div>
+                        <div style={{ whiteSpace: "pre-wrap" }}>
+                          <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{msg.content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className={`loading_box mb-4 chat_box justify-content-start ${msgLoad ? "d-none" : "d-flex"}`}>
                     <div className="me-2 mt-1">
                       <div
                         className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
@@ -166,46 +201,21 @@ const Jh_data = () => {
                         AI
                       </div>
                     </div>
-                  )}
-
-                  {/* 말풍선 본체 */}
-                  <div
-                    className={`p-3 shadow-sm ${msg.role === "user"
-                        ? "bg-primary text-white rounded-start-4 rounded-top-4" // 사용자
-                        : "bg-white text-dark border rounded-end-4 rounded-top-4" // AI
-                      }`}
-                    style={{ maxWidth: "75%", fontSize: "0.95rem" }}
-                  >
-                    <div className="fw-bold mb-1 small" style={{ opacity: 0.8 }}>
-                      {msg.role === "user" ? "나" : "gemma"}
-                    </div>
-                    <div style={{ whiteSpace: "pre-wrap" }}>
-                      <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{msg.content}</ReactMarkdown>
+                    <div className={`p-3 shadow-sm "bg-white text-dark border rounded-end-4 rounded-top-4`}
+                      style={{ maxWidth: "75%", fontSize: "0.95rem" }}>
+                      <div className="fw-bold mb-1 small" style={{ opacity: 0.8 }}>
+                        gemma
+                      </div>
+                      <div className="loading_chat" style={{ whiteSpace: "pre-wrap" }}>
+                        <span>•</span>
+                        <span>•</span>
+                        <span>•</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              <div className={`loading_box mb-4 chat_box justify-content-start ${msgLoad ? "d-none" : "d-flex"}`}>
-                <div className="me-2 mt-1">
-                  <div
-                    className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                    style={{ width: "30px", height: "30px", fontSize: "12px" }}>
-                    AI
-                  </div>
-                </div>
-                <div className={`p-3 shadow-sm "bg-white text-dark border rounded-end-4 rounded-top-4`}
-                  style={{ maxWidth: "75%", fontSize: "0.95rem" }}>
-                  <div className="fw-bold mb-1 small" style={{ opacity: 0.8 }}>
-                    gemma
-                  </div>
-                  <div className="loading_chat" style={{ whiteSpace: "pre-wrap" }}>
-                    <span>•</span>
-                    <span>•</span>
-                    <span>•</span>
-                  </div>
+                  <div ref={scrollRef} />
                 </div>
               </div>
-              <div ref={scrollRef} />
             </div>
           </div>
 

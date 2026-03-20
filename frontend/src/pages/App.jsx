@@ -4,7 +4,7 @@ import NotFound from '@pages/NotFound.jsx'
 import Home from '@pages/Home.jsx'
 import Jh_data from '@pages/Jh_data.jsx'
 import Nav from '@pages/Nav.jsx'
-
+import '@styles/Sidebar.css';
 
 function App() {
    const paths = [
