@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession, Row
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, inspect, text
 from fastapi import FastAPI
 import pandas as pd
@@ -7,6 +8,14 @@ import os
 import re
 
 app = FastAPI()
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 spark = None
 
@@ -205,3 +214,107 @@ def analyze_all_years():
         }
     except Exception as e:
         return {"status": False, "error": f"일괄 처리 중 예외 발생: {str(e)}"}
+
+# DB 연결 정보
+DB_URL_EDU = 'mysql+pymysql://root:1234@192.168.0.204:3306/edu'
+DB_URL_FLOW = 'mysql+pymysql://root:1234@192.168.0.204:3306/metro_flow'
+
+@app.get('/create_integrated_view')
+def create_integrated_view():
+    # 17개년 데이터를 역번호 기준으로 합산하여 중복을 제거한 통합 뷰 생성
+    engine_flow = create_engine(DB_URL_FLOW)
+    years = [str(y) for y in range(2008, 2025)]
+    
+    union_queries = []
+    for year in years:
+        query = f"""
+            SELECT 
+                '{year}' AS `연도`,
+                `역번호`,
+                MAX(`역명`) AS `역명`, -- 일단 가져오지만 중요하지 않음
+                SUM(`출근_승차합`) AS `출근_승차합`,
+                SUM(`출근_하차합`) AS `출근_하차합`,
+                SUM(`퇴근_승차합`) AS `퇴근_승차합`,
+                SUM(`퇴근_하차합`) AS `퇴근_하차합`,
+                -- 비율 및 성격 재계산 (확정된 로직 적용)
+                ROUND(SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0), 2) AS `출근_하차비율`,
+                ROUND(SUM(`퇴근_승차합`) / NULLIF(SUM(`퇴근_하차합`), 0), 2) AS `퇴근_승차비율`,
+                ROUND(SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0), 2) AS `출근_승차비율`,
+                ROUND(SUM(`퇴근_하차합`) / NULLIF(SUM(`퇴근_승차합`), 0), 2) AS `퇴근_하차비율`,
+                CASE 
+                    WHEN (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 2.0 AND SUM(`퇴근_승차합`) / NULLIF(SUM(`퇴근_하차합`), 0) >= 1.3)
+                         OR (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 4.0) THEN '오피스'
+                    WHEN (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 2.0 AND SUM(`퇴근_하차합`) / NULLIF(SUM(`퇴근_승차합`), 0) >= 1.3)
+                         OR (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 4.0) THEN '주거단지'
+                    ELSE '상업/복합'
+                END AS `역성격`
+            FROM `metro_flow_{year}`
+            GROUP BY `역번호`
+        """
+        union_queries.append(query)
+    
+    full_query = "CREATE OR REPLACE VIEW `v_metro_analysis_all` AS " + " UNION ALL ".join(union_queries)
+    
+    try:
+        with engine_flow.connect() as conn:
+            conn.execute(text(full_query))
+            conn.commit()
+        return {"status": True, "message": "중복 제거된 17개년 통합 뷰 생성 완료"}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+
+@app.get('/station_history')
+def get_station_history(station_name: str):
+    # 이름 검색하면 최신년도 역번호 찾아 17년치 변화 반환
+    engine_flow = create_engine(DB_URL_FLOW)
+    try:
+        with engine_flow.connect() as conn:
+            # 1단계: 2024년 데이터에서 해당 이름의 역번호 찾기
+            code_query = text("""
+                SELECT `역번호`, `역명` 
+                FROM `metro_flow_2024` 
+                WHERE `역명` LIKE :name 
+                LIMIT 1
+            """)
+            code_res = conn.execute(code_query, {"name": f"%{station_name}%"}).fetchone()
+            
+            if not code_res:
+                return {"status": False, "error": "역을 찾을 수 없습니다."}
+
+            # 2단계: 통합 뷰에서 해당 역번호 히스토리 조회
+            history_query = text("""
+                SELECT *
+                FROM `v_metro_analysis_all`
+                WHERE `역번호` = :code
+                ORDER BY `연도` ASC
+            """)
+            df = pd.read_sql_query(history_query, conn, params={"code": code_res[0]})
+            
+        return {"status": True, "station_name": code_res[1], "station_code": code_res[0], "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+    
+@app.get('/map_summary/{year}')
+def get_map_summary(year: str):
+    # 특정 연도의 모든 역 성격 데이터 (지도 시각화용)
+    engine_flow = create_engine(DB_URL_FLOW)
+    try:
+        df = pd.read_sql_query(text("SELECT `역번호`, `역명`, `역성격` FROM `v_metro_analysis_all` WHERE `연도` = :year"), 
+                               engine_flow, params={"year": year})
+        return {"status": True, "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+
+@app.get('/ranking/{year}/{category}')
+def get_ranking(year: str, category: str):
+    # 연도별/성격별 TOP 10 랭킹
+    engine_flow = create_engine(DB_URL_FLOW)
+    sort_col = "`출근_하차비율`" if category == '오피스' else "`출근_승차비율`"
+    try:
+        df = pd.read_sql_query(text(f"""
+            SELECT `역명`, {sort_col} as `ratio` FROM `v_metro_analysis_all` 
+            WHERE `연도` = :year AND `역성격` = :cat ORDER BY {sort_col} DESC LIMIT 10
+        """), engine_flow, params={"year": year, "cat": category})
+        return {"status": True, "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
