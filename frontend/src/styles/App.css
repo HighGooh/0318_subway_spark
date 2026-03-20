@@ -110,3 +110,10 @@ body {
         margin: 0;
     }
 }
+
+body { background-color: #f8f9fa; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .chart-container { min-height: 400px; background: #fff; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 2px dashed #dee2e6; }
+        .badge-office { background-color: #0d6efd; }
+        .badge-home { background-color: #dc3545; }
+        .badge-mix { background-color: #ffc107; color: #000; }
