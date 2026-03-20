@@ -3,6 +3,7 @@ import '@styles/App.css'
 import NotFound from '@pages/NotFound.jsx'
 import Home from '@pages/Home.jsx'
 import Jh_data from '@pages/Jh_data.jsx'
+import Yw_data from '@pages/Yw_data.jsx'
 import Nav from '@pages/Nav.jsx'
 import '@styles/Sidebar.css';
 
@@ -10,6 +11,7 @@ function App() {
    const paths = [
     {path: "/", element: <Home />},
     {path: "jh", element: <Jh_data />},
+    {path: "yw", element: <Yw_data />},
     {path: "*", element: <NotFound />},
   ]
   return (
