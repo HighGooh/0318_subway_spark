@@ -112,7 +112,7 @@ const Jh_data = () => {
     { id: 2, content: "도착지" },
   ]
 
-  for (let i = 2008; i <= 2021; i++) {
+  for (let i = 2008; i <= 2024; i++) {
     option.push(i)
   }
 
