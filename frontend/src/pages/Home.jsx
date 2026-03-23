@@ -46,9 +46,9 @@ const App = () => {
         {/* Header Section */}
         <header className="mb-5 text-center">
           <div className="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill fw-bold">Team Project Archive</div>
-          <h1 className="display-5 fw-bold mb-3">Team4's <span className="text-primary">Portfolio</span></h1>
+          <h1 className="display-5 fw-bold mb-3">High Go!'s <span className="text-primary">Portfolio</span></h1>
           <p className="text-secondary lead mx-auto" style={{ maxWidth: '800px' }}>
-            데이터 분석부터 AI 연동까지, 팀 4가 쌓아온 기술적 여정을 확인해 보세요.
+            데이터 분석부터 AI 연동까지, 팀 High Go!가 쌓아온 기술적 여정을 확인해 보세요.
           </p>
           
           {/* Search Bar - 더 깔끔한 디자인 */}
