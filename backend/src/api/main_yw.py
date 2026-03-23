@@ -1,102 +1,48 @@
 from pyspark.sql import SparkSession, Row
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, inspect, text
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 import pandas as pd
-from settings import settings
 import os
 import re
+from src.core.spark import conn
+from src.core.settings import settings
+import sys
+from pyspark.sql.functions import regexp_replace
+import numpy as np
 
-app = FastAPI()
-# CORS 설정
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-spark = None
+router = APIRouter(tags=["yunwoo"])
 
-@app.on_event("startup")
-def startup_event():
-  global spark
-  try:
-    spark = SparkSession.builder \
-      .appName("mySparkApp_yw") \
-      .master(settings.spark_url) \
-      .config("spark.driver.host", settings.host_ip) \
-      .config("spark.driver.bindAddress", "0.0.0.0") \
-      .config("spark.driver.port", "10000") \
-      .config("spark.blockManager.port", "10001") \
-      .config("spark.cores.max", "2") \
-      .getOrCreate()
-    print("Spark Session Created Successfully!")
-  except Exception as e:
-    print(f"Failed to create Spark session: {e}")
-  
-@app.on_event("shutdown")
-def shutdown_event():
-  if spark:
-    spark.stop()
-
-@app.get("/")
-def read_root(fileName:str):
-  if not spark:
-    return {"status": False, "error": "Spark session not initialized"}
-  try:
-    file_path = os.path.join(settings.file_dir, fileName)
-    df = pd.read_csv(file_path, encoding="cp949", header=0, thousands=',', quotechar='"', skipinitialspace=True)
-    # ANSI = cp949, UTF = utf-8
-
-    # 모든 컬럼 이름의 앞뒤 공백 제거
-    df.columns = df.columns.str.strip()
-    # 모든 문자열 데이터의 앞뒤 공백 제거
-    df = df.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
-    spDf = spark.createDataFrame(df)
-
-    # sql문 영역
-    view_name = fileName.split('.')[0]
-    spDf.createOrReplaceTempView(f"subway_{view_name}")
-
-    # SQL 쿼리 실행
-    sql_result = spark.sql(f"""
-        SELECT `역명`, `구분`, SUM( `06~07` + `07~08` + `08~09` ) as `출근시간대_승차`
-        FROM subway_{view_name}
-        WHERE `역명` LIKE '서울역%' AND `구분` = '승차'
-        GROUP BY `역명`, `구분`
-        """)
-
-    # 결과 확인
-    sql_result.show()
-
-    result = sql_result.limit(50).toPandas().to_dict(orient="records")
-    return {"status": True, "data": result}
-  except Exception as e:
-    return {"status": False, "error": str(e)}
-
-@app.get('/fromdb')
+@router.get('/fromdb')
 def fromdb(year: str):
+  spark= conn()
+  status = True
+  mssage = None
   if not spark:
     return {"status": False, "error": "Spark session not initialized"}
   try:
-    engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/edu')
-    inspector = inspect(engine_mariadb)
-    tables = inspector.get_table_names()
-    # print(tables)
-    sql = text(f"select * from `seoul_metro` where `날짜` like '{year}%'")
-
-    # 데이터 로드 후 전처리
-    result = pd.read_sql_query(sql, engine_mariadb)
-    result.columns = result.columns.str.strip()
+    connection_properties = {
+            "user": "root",
+            "password": "1234",
+            "driver": "org.mariadb.jdbc.Driver",
+            "char.encoding": "utf-8",
+            "characterEncoding": "UTF-8",
+            "useUnicode": "true",
+            "sessionVariables": "sql_mode='ANSI_QUOTES'"
+        }    
+    query = f"(select * from `seoul_metro` where `날짜` like '{year}%') as tmp"
+    spDf = spark.read.jdbc(
+        url='jdbc:mariadb://192.168.0.204:3306/edu',
+        table=query,
+        properties= connection_properties
+        
+    )
+    
 
     # 역명에서 (역번호)만 제거하는 로직 추가
-    result['역명'] = result['역명'].apply(lambda x: re.sub(r"\(\d{1,}\)", "", str(x)).strip())
-
-    spDf = spark.createDataFrame(result)
+    spDf = spDf.withColumn("역명", regexp_replace("역명", r"\(\d+\)", ""))
     spDf.createOrReplaceTempView(f"analysis_{year}")
-
     # spark로 작업할 sql문
     analysis_sql = f"""
         SELECT 
@@ -162,8 +108,8 @@ def fromdb(year: str):
       analysis_pandas_df.to_sql(name=new_table_name, con=engine_mariadb, if_exists='replace', index=False)
       
       # 타입 최적화 및 컬럼 코멘트 추가
-      with engine_mariadb.connect() as conn:
-          conn.execute(text(f"""
+      with engine_mariadb.connect() as conn_db:
+          conn_db.execute(text(f"""
               ALTER TABLE `{new_table_name}` 
               MODIFY COLUMN `역번호` INT COMMENT '지하철 역 고유 번호',
               MODIFY COLUMN `역명` VARCHAR(20) COMMENT '지하철 역 이름',
@@ -177,18 +123,24 @@ def fromdb(year: str):
               MODIFY COLUMN `퇴근_하차비율` FLOAT COMMENT '주거 지표2: 저녁에 얼마나 내리는가',
               MODIFY COLUMN `역성격` VARCHAR(20) COMMENT '승하차 비율 기반 역 분류, 오피스:(출근_하차비율2이상and퇴근_승차비율1.5이상), 주거단지:(오피스 조건의 반대), 상업/복합:else'
           """))
-          conn.commit()
+          conn_db.commit()
       
       print(f"성공: {new_table_name} 테이블 저장 및 코멘트 추가 완료")
 
     except Exception as save_error:
         print(f"DB 저장 중 오류 발생: {save_error}")
-    return {"status": True, "data": final_result}
   except Exception as e:
-    return {"status": False, "error": str(e)}
+    status = False
+    mssage = str(e)
+  finally:
+    if spark: spark.stop()
+  return {"status": status,"data": final_result, "message": mssage}
   
-@app.get('/analyze_all_years')
+@router.get('/analyze_all_years')
 def analyze_all_years():
+    spark = conn()
+    status = True
+    mssage = None
     if not spark:
         return {"status": False, "error": "Spark session not initialized"}
     
@@ -207,19 +159,24 @@ def analyze_all_years():
                 "error": result.get("error") if not result.get("status") else None
             })
             
-        return {
-            "status": True, 
-            "message": "전체 연도(2008-2024) 처리가 완료되었습니다.", 
-            "details": summary
-        }
+        
     except Exception as e:
-        return {"status": False, "error": f"일괄 처리 중 예외 발생: {str(e)}"}
+        status = False
+        mssage = str(e)
+    finally:
+        if spark: spark.stop()
+    return {
+            "status": status, 
+            "message": "전체 연도(2008-2024) 처리가 완료되었습니다.", 
+            "details": summary,
+            "message": mssage
+        }
 
 # DB 연결 정보
 DB_URL_EDU = 'mysql+pymysql://root:1234@192.168.0.204:3306/edu'
 DB_URL_FLOW = 'mysql+pymysql://root:1234@192.168.0.204:3306/metro_flow'
 
-@app.get('/create_integrated_view')
+@router.get('/create_integrated_view')
 def create_integrated_view():
     # 17개년 데이터를 역번호 기준으로 합산하여 중복을 제거한 통합 뷰 생성
     engine_flow = create_engine(DB_URL_FLOW)
@@ -256,19 +213,19 @@ def create_integrated_view():
     full_query = "CREATE OR REPLACE VIEW `v_metro_analysis_all` AS " + " UNION ALL ".join(union_queries)
     
     try:
-        with engine_flow.connect() as conn:
-            conn.execute(text(full_query))
-            conn.commit()
+        with engine_flow.connect() as conn_db:
+            conn_db.execute(text(full_query))
+            conn_db.commit()
         return {"status": True, "message": "중복 제거된 17개년 통합 뷰 생성 완료"}
     except Exception as e:
         return {"status": False, "error": str(e)}
 
-@app.get('/station_history')
+@router.get('/station_history')
 def get_station_history(station_name: str):
     # 이름 검색하면 최신년도 역번호 찾아 17년치 변화 반환
     engine_flow = create_engine(DB_URL_FLOW)
     try:
-        with engine_flow.connect() as conn:
+        with engine_flow.connect() as conn_db:
            # 1단계: 2024년 데이터에서 검색어와 관련된 역명 후보들을 가져옴
             # ORDER BY를 통해 검색어와 정확히 일치하는 이름이 가장 위(첫 번째)로 오게 함
             # 예: "동대문" 검색 시 "동대문"이 "동대문역사문화공원"보다 먼저 선택됨
@@ -281,7 +238,7 @@ def get_station_history(station_name: str):
             """)
             
             # LIKE 검색용(% 포함)과 정확한 비교용(raw)을 따로 넘김
-            search_res = conn.execute(search_query, {
+            search_res = conn_db.execute(search_query, {
                 "name": f"%{station_name}%", 
                 "raw_name": station_name
             }).fetchone()
@@ -299,7 +256,7 @@ def get_station_history(station_name: str):
                 FROM `metro_flow_2024` 
                 WHERE `역명` = :name
             """)
-            code_res = conn.execute(code_query, {"name": official_name}).fetchall()
+            code_res = conn_db.execute(code_query, {"name": official_name}).fetchall()
             target_codes = [r[0] for r in code_res]
 
             # 3단계: 통합 뷰에서 '해당 번호들 전체'를 연도별로 SUM(합산)하여 조회합니다.
@@ -330,42 +287,42 @@ def get_station_history(station_name: str):
             """)
             
             # 파라미터 전달 시 리스트 형식을 그대로 넘깁니다.
-            df = pd.read_sql_query(history_query, conn, params={"codes": target_codes})
+            df = pd.read_sql_query(history_query, conn_db, params={"codes": target_codes})
 
         return {"status": True, "station_name": official_name, "station_code": target_codes, "data": df.to_dict(orient="records")}
     except Exception as e:
         return {"status": False, "error": str(e)}
     
-@app.get('/map_summary/{year}')
-def get_map_summary(year: str):
-    # 특정 연도의 모든 역 성격 데이터 (지도 시각화용)
-    engine_flow = create_engine(DB_URL_FLOW)
-    try:
-        df = pd.read_sql_query(text("SELECT `역번호`, `역명`, `역성격` FROM `v_metro_analysis_all` WHERE `연도` = :year"), 
-                               engine_flow, params={"year": year})
-        return {"status": True, "data": df.to_dict(orient="records")}
-    except Exception as e:
-        return {"status": False, "error": str(e)}
+# @router.get('/map_summary/{year}')
+# def get_map_summary(year: str):
+#     # 특정 연도의 모든 역 성격 데이터 (지도 시각화용)
+#     engine_flow = create_engine(DB_URL_FLOW)
+#     try:
+#         df = pd.read_sql_query(text("SELECT `역번호`, `역명`, `역성격` FROM `v_metro_analysis_all` WHERE `연도` = :year"), 
+#                                engine_flow, params={"year": year})
+#         return {"status": True, "data": df.to_dict(orient="records")}
+#     except Exception as e:
+#         return {"status": False, "error": str(e)}
 
-@app.get('/ranking/{year}/{category}')
-def get_ranking(year: str, category: str):
-    # 연도별/성격별 TOP 10 랭킹
-    engine_flow = create_engine(DB_URL_FLOW)
-    # 성격에 따른 정렬 기준 (합산된 SUM 값을 기준으로 계산)
-    sort_logic = "SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0)" if category == '오피스' else "SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0)"
-    try:
-        # 뷰에서 데이터를 가져온 뒤 '역명'으로 묶어 인원수를 합산하고 비율을 다시 계산합니다.
-        query = text(f"""
-            SELECT 
-                `역명`, 
-                ROUND({sort_logic}, 2) as `ratio`
-            FROM `v_metro_analysis_all` 
-            WHERE `연도` = :year AND `역성격` = :cat 
-            GROUP BY `역명` 
-            ORDER BY `ratio` DESC 
-            LIMIT 10
-        """)
-        df = pd.read_sql_query(query, engine_flow, params={"year": year, "cat": category})
-        return {"status": True, "data": df.to_dict(orient="records")}
-    except Exception as e:
-        return {"status": False, "error": str(e)}
+# @router.get('/ranking/{year}/{category}')
+# def get_ranking(year: str, category: str):
+#     # 연도별/성격별 TOP 10 랭킹
+#     engine_flow = create_engine(DB_URL_FLOW)
+#     # 성격에 따른 정렬 기준 (합산된 SUM 값을 기준으로 계산)
+#     sort_logic = "SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0)" if category == '오피스' else "SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0)"
+#     try:
+#         # 뷰에서 데이터를 가져온 뒤 '역명'으로 묶어 인원수를 합산하고 비율을 다시 계산합니다.
+#         query = text(f"""
+#             SELECT 
+#                 `역명`, 
+#                 ROUND({sort_logic}, 2) as `ratio`
+#             FROM `v_metro_analysis_all` 
+#             WHERE `연도` = :year AND `역성격` = :cat 
+#             GROUP BY `역명` 
+#             ORDER BY `ratio` DESC 
+#             LIMIT 10
+#         """)
+#         df = pd.read_sql_query(query, engine_flow, params={"year": year, "cat": category})
+#         return {"status": True, "data": df.to_dict(orient="records")}
+#     except Exception as e:
+#         return {"status": False, "error": str(e)}
