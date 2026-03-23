@@ -7,12 +7,12 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const portfolioItems = [
-    { id: 1, title: 'Ji hwan', type: 'UX/UI', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-heart', link: '/jh' },
-    { id: 2, title: 'Yun Woo', type: 'AI Agent', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-robot', link: '/yw' },
-    { id: 3, title: 'Ga young', type: 'Video', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정)', icon: 'fa-video', link: '/gy' },
+    { id: 1, title: 'Ji hwan', type: 'Spark', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-heart', link: '/jh' },
+    { id: 2, title: 'Yun Woo', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-robot', link: '/yw' },
+    { id: 3, title: 'Ga young', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정)', icon: 'fa-video', link: '/gy' },
   ];
 
-  const tabs = ['전체', 'UX/UI', 'AI Agent', 'Video', 'Study'];
+  const tabs = ['전체', 'Spark'];
 
   const filteredItems = portfolioItems.filter(item => {
     const matchesTab = activeTab === '전체' || item.type === activeTab;
@@ -28,7 +28,7 @@ const App = () => {
         <header className="mb-5">
           <div className="d-flex align-items-center mb-2">
             <i className="fas fa-folder fa-2x text-primary"></i>
-            <h1 className="fw-bold m-0">Team4's <span className="text-primary">Spark 활용 </span>Project</h1>
+            <h1 className="fw-bold m-0">Team4's <span className="text-primary">Project</span></h1>
           </div>
           <p className="text-secondary small mb-4">팀 프로젝트 결과물을 확인해보실 수 있습니다.</p>
           
