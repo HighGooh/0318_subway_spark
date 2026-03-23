@@ -97,40 +97,55 @@ class SearchQuery(BaseModel):
     time: int    # '05~06'
 
 @router.post('/search_complex')
-def search_complex(model: SearchQuery, req: Request):
+def search_complex(model: SearchQuery):
   spark = conn()
   status = True
   mssage = None
 
-  timeList = []
-  for time in range(model.time, model.time+3) :
-    if len(str(time)) == 1: timeList.append("0"+str(time))
-    else : timeList.append(str(time))
-  
   station_list = [model.start_st, model.finish_st]
   for st in model.stations:
     station_list.append(st)
-
-  
-  print(timeList)
   stations_formatted = ", ".join([f"'{s}'" for s in station_list])
 
   try:
-    sql1 = f"""
-      SELECT `역명`, ROUND(AVG(CAST(`{timeList[0]}~{timeList[1]}` AS INT) + CAST(`{timeList[1]}~{timeList[2]}` AS INT)),0) AS `지정 평균 승객` 
-      FROM jhYearTable
-      WHERE `역명` IN ({stations_formatted}) 
-      GROUP BY `역명`;
-        """
-    fIdDf1 = spark.sql(sql1)
-    result_data1 = fIdDf1.toPandas().to_dict(orient="records")
+    timeList = []
+    if model.time != 24:
+      for time in range(model.time, model.time+3) :
+        if len(str(time)) == 1: timeList.append("0"+str(time))
+        else : timeList.append(str(time))
+      
+      sql1 = f"""
+        SELECT `역명`, ROUND(AVG(CAST(`{timeList[0]}~{timeList[1]}` AS INT) + CAST(`{timeList[1]}~{timeList[2]}` AS INT)),0) AS `지정 평균 승객` 
+        FROM jhYearTable
+        WHERE `역명` IN ({stations_formatted}) 
+        GROUP BY `역명`;
+          """
+      fIdDf1 = spark.sql(sql1)
+      result_data1 = fIdDf1.toPandas().to_dict(orient="records")
 
-    sql2 = f'''
-    SELECT  ROUND(AVG(CAST(`{timeList[0]}~{timeList[1]}` AS INT) + CAST(`{timeList[1]}~{timeList[2]}` AS INT)),0) AS `전체 평균 승객` 
-    FROM jhYearTable
-    '''
-    fIdDf2 = spark.sql(sql2)
-    result_data2 = fIdDf2.toPandas().to_dict(orient="records")
+      sql2 = f'''
+      SELECT  ROUND(AVG(CAST(`{timeList[0]}~{timeList[1]}` AS INT) + CAST(`{timeList[1]}~{timeList[2]}` AS INT)),0) AS `전체 평균 승객` 
+      FROM jhYearTable
+      '''
+      fIdDf2 = spark.sql(sql2)
+      result_data2 = fIdDf2.toPandas().to_dict(orient="records")
+
+    else : 
+      sql1 = f"""
+        SELECT `역명`, ROUND(AVG(CAST(`{time}~{time+1}` AS INT)),0) AS `지정 평균 승객` 
+        FROM jhYearTable
+        WHERE `역명` IN ({stations_formatted}) 
+        GROUP BY `역명`;
+          """
+      fIdDf1 = spark.sql(sql1)
+      result_data1 = fIdDf1.toPandas().to_dict(orient="records")
+
+      sql2 = f'''
+      SELECT  ROUND(AVG(CAST(`{time}~{time+1}` AS INT)),0) AS `전체 평균 승객` 
+      FROM jhYearTable
+      '''
+      fIdDf2 = spark.sql(sql2)
+      result_data2 = fIdDf2.toPandas().to_dict(orient="records")
 
   except Exception as e:
     status = False
