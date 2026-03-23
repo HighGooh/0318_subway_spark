@@ -1,9 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import avg, col, when
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, inspect, text
 from fastapi import FastAPI
 import pandas as pd
 from settings import settings
+from fastapi import Request
 import os
 import sys
 
@@ -18,6 +20,23 @@ os.environ['PYSPARK_SUBMIT_ARGS'] = (
 app = FastAPI()
 
 spark = None
+
+origins = [
+    "http://192.168.0.109:5173",
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/metro_db')
+
+inspector = inspect(engine_mariadb)
 
 @app.on_event("startup")
 def startup_event():
@@ -58,16 +77,14 @@ def read_root(fileName:str):
 
 
 @app.get('/kidsDay')
-def kidsDay():
+def kidsDay(year: str, req: Request):
   if not spark:
     return {"status": False, "error": "Spark session not initialized"}
   try:
-    engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/metro_db')
-    inspector = inspect(engine_mariadb)
-    tables = inspector.get_table_names()
-    print(tables)
-    sql = text("""
-          SELECT * FROM metro_db.seoul_metro WHERE `날짜` LIKE '%05-05' AND `구분` = '하차'""")
+    # tables = inspector.get_table_names()
+    # print(tables)
+    sql = text(f"""
+          SELECT * FROM metro_db.seoul_metro WHERE `날짜` like '{year}-05-05' AND `구분` = '하차'""")
     result = pd.read_sql_query(sql, engine_mariadb)
     spDf = spark.createDataFrame(result)
     spDf.createOrReplaceTempView("kidsDayTable")
@@ -77,7 +94,6 @@ def kidsDay():
                 SELECT `역명`, `날짜`, `구분`,
                 (CAST(`10~11` AS INT) + CAST(`11~12` AS INT) + CAST(`12~13` AS INT)) as `합계`,
                 ROW_NUMBER() OVER (
-                    PARTITION BY SUBSTRING(`날짜`, 1, 4)
                     ORDER BY (CAST(`10~11` AS INT) + CAST(`11~12` AS INT) + CAST(`12~13` AS INT)) DESC
                 ) as `순위`
                 FROM kidsDayTable
@@ -86,63 +102,8 @@ def kidsDay():
             ORDER BY `날짜` ASC, `합계` DESC
         """
     fIdDf = spark.sql(sql2)
-    print(fIdDf.show(100))
-    result = spDf.limit(50).toPandas().to_dict(orient="records")
+    # print(fIdDf.show(100))
+    result =fIdDf.limit(50).toPandas().to_dict(orient="records")
     return {"status": True, "data": result}
   except Exception as e:
     return {"status": False, "error": str(e)}
-  
-
-@app.get('/covid')
-def covid():
-    if not spark:
-        return {"status": False, "error": "Spark session not initialized"}
-    
-    try:
-        engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/metro_db')
-        inspector = inspect(engine_mariadb)
-        tables = inspector.get_table_names()
-        print(tables)
-        sql = """
-            SELECT 
-                SUBSTRING(`날짜`, 1, 4) AS `년도`, 
-                SUM(CASE WHEN `구분` = '승차' THEN CAST(`합계` AS SIGNED) ELSE 0 END) AS `승차 총 합`,
-                SUM(CASE WHEN `구분` = '하차' THEN CAST(`합계` AS SIGNED) ELSE 0 END) AS `하차 총 합`
-            FROM metro_db.seoul_metro
-            WHERE `구분` IN ('승차', '하차')
-            GROUP BY SUBSTRING(`날짜`, 1, 4)
-            ORDER BY `년도`
-        """
-        result = pd.read_sql_query(sql, engine_mariadb)
-        spDf = spark.createDataFrame(result)
-        
-        # # 코로나 이전 승하차 평균
-        # before_df = spDf.filter(spDf['년도'] < '2020')
-        # before_on_avg = before_df.agg(avg("승차 총 합")).collect()[0][0]
-        # before_off_avg = before_df.agg(avg("하차 총 합")).collect()[0][0]
-
-        # # 코로나 이후 승하차 평균
-        # after_df = spDf.filter(spDf['년도'] >= '2020')
-        # after_on_avg = after_df.agg(avg("승차 총 합")).collect()[0][0]
-        # after_off_avg = after_df.agg(avg("하차 총 합")).collect()[0][0]
-        
-        # 하나의 collect만 이용
-        stats = spDf.select(
-            avg(when(col('년도') < '2020', col('승차 총 합'))).alias('before_on_total'),
-            avg(when(col('년도') < '2020', col('하차 총 합'))).alias('before_off_total'),
-            avg(when(col('년도') >= '2020', col('승차 총 합'))).alias('after_on_total'),
-            avg(when(col('년도') >= '2020', col('하차 총 합'))).alias('after_off_total')
-        ).collect()[0]
-
-
-        return {
-            "status": True,
-            "summary": {
-                "before_on_avg": round(stats['before_on_total'],0),
-                "before_off_avg": round(stats['before_off_total'],0),
-                "after_on_avg": round(stats['after_on_total'],0),
-                "after_off_avg": round(stats['after_off_total'],0)
-            }
-        }
-    except Exception as e:
-        return {"status": False, "error": str(e)}
