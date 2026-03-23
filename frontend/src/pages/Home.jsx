@@ -8,8 +8,8 @@ const App = () => {
 
   const portfolioItems = [
     { id: 1, title: 'Ji hwan', type: 'UX/UI', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-heart', link: '/jh' },
-    { id: 2, title: 'Yun Woo', type: 'AI Agent', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-robot', link: '#' },
-    { id: 3, title: 'Ga young', type: 'Video', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정/ 코로나 전후 이용객 평균 계산)', icon: 'fa-video', link: '/gy' },
+    { id: 2, title: 'Yun Woo', type: 'AI Agent', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-robot', link: '/yw' },
+    { id: 3, title: 'Ga young', type: 'Video', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정)', icon: 'fa-video', link: '/gy' },
   ];
 
   const tabs = ['전체', 'UX/UI', 'AI Agent', 'Video', 'Study'];

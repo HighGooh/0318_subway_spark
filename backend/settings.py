@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
   spark_url: str
-  host_ip: str
+  host_ip: str 
   file_dir: str
 
   model_config = SettingsConfigDict(

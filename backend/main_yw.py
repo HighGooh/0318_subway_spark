@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession, Row
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, inspect, text
 from fastapi import FastAPI
 import pandas as pd
@@ -7,6 +8,14 @@ import os
 import re
 
 app = FastAPI()
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 spark = None
 
@@ -83,7 +92,7 @@ def fromdb(year: str):
     result.columns = result.columns.str.strip()
 
     # 역명에서 (역번호)만 제거하는 로직 추가
-    result['역명'] = result['역명'].apply(lambda x: re.sub(r"\(\d{3,}\)", "", str(x)).strip())
+    result['역명'] = result['역명'].apply(lambda x: re.sub(r"\(\d{1,}\)", "", str(x)).strip())
 
     spDf = spark.createDataFrame(result)
     spDf.createOrReplaceTempView(f"analysis_{year}")
@@ -205,3 +214,158 @@ def analyze_all_years():
         }
     except Exception as e:
         return {"status": False, "error": f"일괄 처리 중 예외 발생: {str(e)}"}
+
+# DB 연결 정보
+DB_URL_EDU = 'mysql+pymysql://root:1234@192.168.0.204:3306/edu'
+DB_URL_FLOW = 'mysql+pymysql://root:1234@192.168.0.204:3306/metro_flow'
+
+@app.get('/create_integrated_view')
+def create_integrated_view():
+    # 17개년 데이터를 역번호 기준으로 합산하여 중복을 제거한 통합 뷰 생성
+    engine_flow = create_engine(DB_URL_FLOW)
+    years = [str(y) for y in range(2008, 2025)]
+    
+    union_queries = []
+    for year in years:
+        query = f"""
+            SELECT 
+                '{year}' AS `연도`,
+                `역번호`,
+                MAX(`역명`) AS `역명`, -- 일단 가져오지만 중요하지 않음
+                SUM(`출근_승차합`) AS `출근_승차합`,
+                SUM(`출근_하차합`) AS `출근_하차합`,
+                SUM(`퇴근_승차합`) AS `퇴근_승차합`,
+                SUM(`퇴근_하차합`) AS `퇴근_하차합`,
+                -- 비율 및 성격 재계산 (확정된 로직 적용)
+                ROUND(SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0), 2) AS `출근_하차비율`,
+                ROUND(SUM(`퇴근_승차합`) / NULLIF(SUM(`퇴근_하차합`), 0), 2) AS `퇴근_승차비율`,
+                ROUND(SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0), 2) AS `출근_승차비율`,
+                ROUND(SUM(`퇴근_하차합`) / NULLIF(SUM(`퇴근_승차합`), 0), 2) AS `퇴근_하차비율`,
+                CASE 
+                    WHEN (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 2.0 AND SUM(`퇴근_승차합`) / NULLIF(SUM(`퇴근_하차합`), 0) >= 1.3)
+                         OR (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 4.0) THEN '오피스'
+                    WHEN (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 2.0 AND SUM(`퇴근_하차합`) / NULLIF(SUM(`퇴근_승차합`), 0) >= 1.3)
+                         OR (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 4.0) THEN '주거단지'
+                    ELSE '상업/복합'
+                END AS `역성격`
+            FROM `metro_flow_{year}`
+            GROUP BY `역번호`
+        """
+        union_queries.append(query)
+    
+    full_query = "CREATE OR REPLACE VIEW `v_metro_analysis_all` AS " + " UNION ALL ".join(union_queries)
+    
+    try:
+        with engine_flow.connect() as conn:
+            conn.execute(text(full_query))
+            conn.commit()
+        return {"status": True, "message": "중복 제거된 17개년 통합 뷰 생성 완료"}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+
+@app.get('/station_history')
+def get_station_history(station_name: str):
+    # 이름 검색하면 최신년도 역번호 찾아 17년치 변화 반환
+    engine_flow = create_engine(DB_URL_FLOW)
+    try:
+        with engine_flow.connect() as conn:
+           # 1단계: 2024년 데이터에서 검색어와 관련된 역명 후보들을 가져옴
+            # ORDER BY를 통해 검색어와 정확히 일치하는 이름이 가장 위(첫 번째)로 오게 함
+            # 예: "동대문" 검색 시 "동대문"이 "동대문역사문화공원"보다 먼저 선택됨
+            search_query = text("""
+                SELECT DISTINCT `역명` 
+                FROM `metro_flow_2024` 
+                WHERE `역명` LIKE :name
+                ORDER BY (CASE WHEN `역명` = :raw_name THEN 0 ELSE 1 END), LENGTH(`역명`) ASC
+                LIMIT 1
+            """)
+            
+            # LIKE 검색용(% 포함)과 정확한 비교용(raw)을 따로 넘김
+            search_res = conn.execute(search_query, {
+                "name": f"%{station_name}%", 
+                "raw_name": station_name
+            }).fetchone()
+            
+            if not search_res:
+                return {"status": False, "error": "역을 찾을 수 없습니다."}
+            
+            # 우리가 최종적으로 결정한 '정확한 대표 이름'
+            official_name = search_res[0]
+
+            # 2단계: 결정된 'official_name'을 사용하는 모든 역번호(환승역) 리스트 확보
+            # 이제 LIKE가 아니라 '='을 써서 "동대문"과 "동대문역사문화공원"을 철저히 분리함
+            code_query = text("""
+                SELECT DISTINCT `역번호` 
+                FROM `metro_flow_2024` 
+                WHERE `역명` = :name
+            """)
+            code_res = conn.execute(code_query, {"name": official_name}).fetchall()
+            target_codes = [r[0] for r in code_res]
+
+            # 3단계: 통합 뷰에서 '해당 번호들 전체'를 연도별로 SUM(합산)하여 조회합니다.
+            # IN 연산자를 사용하여 여러 역번호의 데이터를 한꺼번에 가져옵니다.
+            history_query = text("""
+                SELECT 
+                    `연도`,
+                    -- 여러 호선(번호)의 인원수를 합산하여 실제 그 지역의 총 규모를 계산
+                    SUM(`출근_승차합`) as `출근_승차합`,
+                    SUM(`출근_하차합`) as `출근_하차합`,
+                    SUM(`퇴근_승차합`) as `퇴근_승차합`,
+                    SUM(`퇴근_하차합`) as `퇴근_하차합`,
+                    -- 합산된 인원수로 비율을 다시 계산 (이게 진짜 그 역의 성격입니다)
+                    ROUND(SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0), 2) AS `출근_하차비율`,
+                    ROUND(SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0), 2) AS `출근_승차비율`,
+                    -- 성격도 합산된 지표로 재판정
+                    CASE 
+                        WHEN (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 2.0 AND SUM(`퇴근_승차합`) / NULLIF(SUM(`퇴근_하차합`), 0) >= 1.3)
+                             OR (SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0) >= 4.0) THEN '오피스'
+                        WHEN (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 2.0 AND SUM(`퇴근_하차합`) / NULLIF(SUM(`퇴근_승차합`), 0) >= 1.3)
+                             OR (SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0) >= 4.0) THEN '주거단지'
+                        ELSE '상업/복합'
+                    END AS `역성격`
+                FROM `v_metro_analysis_all`
+                WHERE `역번호` IN :codes
+                GROUP BY `연도`
+                ORDER BY `연도` ASC
+            """)
+            
+            # 파라미터 전달 시 리스트 형식을 그대로 넘깁니다.
+            df = pd.read_sql_query(history_query, conn, params={"codes": target_codes})
+
+        return {"status": True, "station_name": official_name, "station_code": target_codes, "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+    
+@app.get('/map_summary/{year}')
+def get_map_summary(year: str):
+    # 특정 연도의 모든 역 성격 데이터 (지도 시각화용)
+    engine_flow = create_engine(DB_URL_FLOW)
+    try:
+        df = pd.read_sql_query(text("SELECT `역번호`, `역명`, `역성격` FROM `v_metro_analysis_all` WHERE `연도` = :year"), 
+                               engine_flow, params={"year": year})
+        return {"status": True, "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
+
+@app.get('/ranking/{year}/{category}')
+def get_ranking(year: str, category: str):
+    # 연도별/성격별 TOP 10 랭킹
+    engine_flow = create_engine(DB_URL_FLOW)
+    # 성격에 따른 정렬 기준 (합산된 SUM 값을 기준으로 계산)
+    sort_logic = "SUM(`출근_하차합`) / NULLIF(SUM(`출근_승차합`), 0)" if category == '오피스' else "SUM(`출근_승차합`) / NULLIF(SUM(`출근_하차합`), 0)"
+    try:
+        # 뷰에서 데이터를 가져온 뒤 '역명'으로 묶어 인원수를 합산하고 비율을 다시 계산합니다.
+        query = text(f"""
+            SELECT 
+                `역명`, 
+                ROUND({sort_logic}, 2) as `ratio`
+            FROM `v_metro_analysis_all` 
+            WHERE `연도` = :year AND `역성격` = :cat 
+            GROUP BY `역명` 
+            ORDER BY `ratio` DESC 
+            LIMIT 10
+        """)
+        df = pd.read_sql_query(query, engine_flow, params={"year": year, "cat": category})
+        return {"status": True, "data": df.to_dict(orient="records")}
+    except Exception as e:
+        return {"status": False, "error": str(e)}
