@@ -94,7 +94,7 @@ const Jh_data = () => {
   const [yearNum, setYearNum] = useState(null);
   const [yearLoad, setYearLoad] = useState(false);
 
-  const [subWaySel, setSubWaySel] = useState(true);
+  const [subWaySel, setSubWaySel] = useState(false);
 
   const [drunkSearch, setDrunkSearch] = useState(null);
   const [drunkList, setDrunkList] = useState(null);

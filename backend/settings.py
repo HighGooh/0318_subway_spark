@@ -1,9 +1,9 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-  spark_url: str = "spark://192.168.0.204:7077"
-  host_ip: str = "192.168.0.204"
-  # file_dir: str
+  spark_url: str
+  host_ip: str 
+  file_dir: str
 
   model_config = SettingsConfigDict(
     env_file=".env",
