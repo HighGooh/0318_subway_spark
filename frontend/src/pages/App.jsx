@@ -6,11 +6,14 @@ import Jh_data from '@pages/Jh_data.jsx'
 import Yw_data from '@pages/Yw_data.jsx'
 import Nav from '@pages/Nav.jsx'
 import '@styles/Sidebar.css';
+import Gy_data from "@pages/gy_data.jsx";
+
 
 function App() {
    const paths = [
     {path: "/", element: <Home />},
     {path: "jh", element: <Jh_data />},
+    {path: "gy", element: <Gy_data />},
     {path: "yw", element: <Yw_data />},
     {path: "*", element: <NotFound />},
   ]

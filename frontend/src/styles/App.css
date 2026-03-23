@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Gaegu&display=swap');
 .container-fluid {
   padding: 0 !important;
 }
+
 
 .chat_box {
   animation-name: slideIn;
@@ -9,6 +11,10 @@
   animation-iteration-count: initial;
   overflow-anchor: auto;
   position: relative;
+}
+
+.sketch-font {
+  font-family: 'Gaegu', cursive;
 }
 
 @keyframes slideIn {
