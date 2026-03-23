@@ -6,10 +6,14 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('전체');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6; // 한 페이지에 보여줄 카드 개수
+
   const portfolioItems = [
-    { id: 1, title: 'Ji hwan', type: 'Spark', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-heart', link: '/jh' },
-    { id: 2, title: 'Yun Woo', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-robot', link: '/yw' },
-    { id: 3, title: 'Ga young', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정)', icon: 'fa-video', link: '/gy' },
+    { id: 1, title: 'Ji hwan', type: 'Spark', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-robot', link: '/jh' },
+    { id: 2, title: 'Yun Woo', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-chart-pie', link: '/yw' },
+    { id: 3, title: 'Ga young', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정)', icon: 'fa-chart-line', link: '/gy' },
+
   ];
 
   const tabs = ['전체', 'Spark'];
@@ -20,69 +24,114 @@ const App = () => {
     return matchesTab && matchesSearch;
   });
 
-  return (
-    <div className="bg-light py-5">
-      <div className="container bg-white shadow-sm p-4 p-md-5 rounded-4" style={{ maxWidth: '1140px' }}>
-        
-        {/* Header Section */}
-        <header className="mb-5">
-          <div className="d-flex align-items-center mb-2">
-            <i className="fas fa-folder fa-2x text-primary"></i>
-            <h1 className="fw-bold m-0">Team4's <span className="text-primary">Project</span></h1>
-          </div>
-          <p className="text-secondary small mb-4">팀 프로젝트 결과물을 확인해보실 수 있습니다.</p>
-          
-          {/* Search Bar */}
-          <div className="input-group mb-4 bg-light rounded-3 p-2">
-            <span className="input-group-text bg-transparent border-0">
-              <i className="fas fa-search text-muted"></i>
-            </span>
-            <input 
-              type="text" 
-              className="form-control bg-transparent border-0 shadow-none" 
-              placeholder="자료 검색..." 
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-          {/* Filter Tabs */}
-          <nav className="nav nav-pills bg-light p-1 rounded-3">
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  return (
+    // 배경에 그라데이션 추가
+    <div className="py-5" style={{ background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', minHeight: "calc(100vh - 57px)"}}>
+      <div className="bg-white shadow-lg p-4 p-md-5 rounded-5" style={{ maxWidth: '1140px', margin: "0 auto"}}> 
+        {/* Header Section */}
+        <header className="mb-5 text-center">
+          <div className="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill fw-bold">Team Project Archive</div>
+          <h1 className="display-5 fw-bold mb-3">Team4's <span className="text-primary">Portfolio</span></h1>
+          <p className="text-secondary lead mx-auto" style={{ maxWidth: '800px' }}>
+            데이터 분석부터 AI 연동까지, 팀 4가 쌓아온 기술적 여정을 확인해 보세요.
+          </p>
+          
+          {/* Search Bar - 더 깔끔한 디자인 */}
+          <div className="mx-auto mt-4" style={{ maxWidth: '500px' }}>
+            <div className="input-group input-group-lg shadow-sm rounded-4 overflow-hidden border">
+              <span className="input-group-text bg-white border-0 px-3">
+                <i className="fas fa-search text-primary"></i>
+              </span>
+              <input 
+                type="text" 
+                className="form-control border-0 ps-0 shadow-none" 
+                placeholder="어떤 프로젝트를 찾으시나요?" 
+                onChange={handleSearch}
+              />
+            </div>
+          </div>
+        </header>
+        
+        {/* Filter Tabs - 글래스모피즘 스타일 */}
+        <div className="d-flex justify-content-center mb-5">
+          <nav className="nav nav-pills bg-light p-2 rounded-pill shadow-sm">
             {tabs.map(tab => (
-              <button 
-                key={tab}
-                className={`nav-link flex-fill border-0 fw-medium ${activeTab === tab ? 'bg-white text-dark shadow-sm active' : 'text-secondary'}`}
-                onClick={() => setActiveTab(tab)}
-              >
+              <button key={tab} className={`nav-link px-4 py-2 rounded-pill border-0 fw-bold ${activeTab === tab ? 'bg-primary text-white' : 'text-secondary'}`} onClick={() => handleTabChange(tab)}>
                 {tab}
               </button>
             ))}
           </nav>
-        </header>
-
-        {/* Grid Layout (Bootstrap Grid) */}
-        <main className="row g-4">
-          {filteredItems.map(item => (
+        </div>
+        {/* Grid Layout */}
+        <main className="row g-4 mb-5">
+          {currentItems.map(item => (
             <div key={item.id} className="col-12 col-md-6 col-lg-4">
-              <a href={item.link} className="card h-100 border-light-subtle text-decoration-none p-4 custom-card">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <span className="text-secondary small d-flex align-items-center gap-2">
-                    <i className={`fas ${item.icon}`}></i> {item.type}
+              <a href={item.link} className="card h-100 text-decoration-none p-4 custom-card bg-white">
+                <div className="d-flex justify-content-between align-items-start mb-4">
+                  <div className="icon-box">
+                    <i className={`fas ${item.icon} fa-lg`}></i>
+                  </div>
+                  <span className="badge rounded-pill text-bg-light border text-secondary px-3 py-2">
+                    {item.date}
                   </span>
-                  <span className="text-body-tertiary small">{item.date}</span>
                 </div>
+                
                 <div className="card-body p-0">
-                  <h3 className="h5 fw-bold text-dark mb-2">{item.title}</h3>
-                  <p className="text-secondary small mb-4">{item.desc}</p>
+                  <div className="text-primary small fw-bold mb-1">{item.type} Project</div>
+                  <h3 className="h4 fw-bold text-dark mb-3" style={{ letterSpacing: '-0.5px' }}>{item.title}</h3>
+                  <p className="text-secondary mb-4" style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
+                    {item.desc}
+                  </p>
                 </div>
-                <div className="mt-auto">
-                  <span className="text-primary fw-semibold small d-flex align-items-center gap-1">
-                    <i className="fas fa-link"></i> 자료 열기
-                  </span>
+                
+                <div className="mt-auto pt-3 border-top d-flex align-items-center justify-content-between">
+                  <span className="text-primary fw-bold small">자료 상세보기</span>
+                  <i className="fas fa-arrow-right text-primary small"></i>
                 </div>
               </a>
             </div>
           ))}
         </main>
+        {totalPages > 1 && (
+          <nav className="d-flex justify-content-center mt-5">
+            <ul className="pagination pagination-md shadow-sm rounded-pill overflow-hidden">
+              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                <button className="page-link border-0 px-3 h-100" onClick={() => setCurrentPage(prev => prev - 1)}>
+                  <i className="fas fa-chevron-left"></i>
+                </button>
+              </li>
+              
+              {[...Array(totalPages)].map((_, i) => (
+                <li key={i + 1} className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}>
+                  <button className="page-link border-0 px-3 fw-bold" onClick={() => setCurrentPage(i + 1)}>
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+
+              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                <button className="page-link border-0 px-3" onClick={() => setCurrentPage(prev => prev + 1)}>
+                  <i className="fas fa-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
       </div>
     </div>
   );
