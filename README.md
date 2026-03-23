@@ -33,7 +33,7 @@
 - **DevOps**: Docker
 
 ## 🏗 System Architecture
-![System Architecture]("./images/architecture_gy.png")
+![System Architecture](./images/architecture_gy.png)
 *사용자 요청부터 MariaDB 필터링, Spark 연산, React 시각화로 이어지는 전체 데이터 파이프라인 설계*
 
 ## 💡 가설 & 증명
