@@ -36,8 +36,8 @@
 
 
 ## 📊 실시간 시각화 대시보드
-
-~~Recharts를 활용해 특정 시간대의 승하차 인원 합계와 비율을 시각화, 오피스/주거 예상 비율을 도출한다.~~
+![Chart](./images/chart_jh_1.jpeg)
+![Chart](./images/chart_jh_2.jpeg)
 
 ## 🔍 핵심 쿼리 로직 (Core Logic)
 
