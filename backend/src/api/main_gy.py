@@ -1,18 +1,9 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import avg, col, when
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 from fastapi import FastAPI, APIRouter
-import pandas as pd
-from fastapi import Request
-import os
-import sys
 from src.core.spark import conn
-from src.core.settings import settings
 
 
 router = APIRouter(tags=["gayoung"])
-
 app = FastAPI()
 
 engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/metro_db')
@@ -21,28 +12,26 @@ inspector = inspect(engine_mariadb)
 
 
 @router.get('/kidsDay')
-def kidsDay(year: str, req: Request):
+def kidsDay(year: str):
+  connection_properties = {
+      "user": "root",
+      "password": "1234",
+      "driver": "org.mariadb.jdbc.Driver",
+      "char.encoding": "utf-8",
+      "characterEncoding": "UTF-8",
+      "useUnicode": "true",
+      "sessionVariables": "sql_mode='ANSI_QUOTES'"
+    }
   spark= conn()
   status = True
   mssage = None
   if not spark:
     return {"status": False, "error": "Spark session not initialized"}
   try:
-    connection_properties = {
-        "user": "root",
-        "password": "1234",
-        "driver": "org.mariadb.jdbc.Driver",
-        "char.encoding": "utf-8",
-        "characterEncoding": "UTF-8",
-        "useUnicode": "true",
-        "sessionVariables": "sql_mode='ANSI_QUOTES'"
-    }    
     query = f"""(SELECT * FROM metro_db.seoul_metro WHERE `날짜` like '{year}-05-05' AND `구분` = '하차') as tmp"""
     spDf = spark.read.jdbc(
         url='jdbc:mariadb://192.168.0.204:3306/metro_db',
-        table=query,
-        properties= connection_properties
-        
+        table=query, properties = connection_properties
     )
     spDf.createOrReplaceTempView("kidsDayTable")
     sql2 = """

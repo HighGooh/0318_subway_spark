@@ -3,6 +3,7 @@ from pyspark.sql import SparkSession, Row
 
 def conn():
     try:
+        print("Existing session stopped.")
         spark = SparkSession.builder \
         .appName("mySparkApp") \
         .master(settings.spark_url) \
@@ -20,6 +21,7 @@ def conn():
         .config("spark.shuffle.io.maxRetries", "10") \
         .config("spark.shuffle.io.retryWait", "15s") \
         .config("spark.jars.packages", "org.mariadb.jdbc:mariadb-java-client:3.5.7") \
+        .config("spark.driver.memory", "4g") \
         .getOrCreate()
         # .config("spark.executor.memory", "512m") \
         # .config("spark.jars", "D:\\IDE\\workspaces\\team\\0318_subway_spark\\backend\\mariadb-java-client-3.5.7.jar") \
