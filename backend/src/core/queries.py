@@ -135,3 +135,60 @@ KIDSDAY_SEARCH_SQL = """
             WHERE `순위` <= 5
             ORDER BY `날짜` ASC, `합계` DESC
         """
+
+Jh_DRUNK_INFO_SQL = """
+          SELECT
+            `역명`,
+            Floor(AVG(CAST(`20~21` AS INT) + CAST(`21~22` AS INT) + CAST(`22~23` AS INT)), 0) AS `night_avg`
+          FROM jhYearTable
+          WHERE (`주말여부` = true
+            OR DAYOFWEEK(CAST(`날짜` AS DATE)) = 6)
+            AND `구분` = '승차'
+          GROUP BY `역명`
+          ORDER BY night_avg DESC
+          LIMIT 10
+"""
+
+
+Jh_GET_STATION_SQL ="""
+            SELECT
+            `역명`
+            FROM jhYearTable
+            GROUP BY `역명`
+"""
+
+def search_complex_sql1(timeList,stations_formatted):
+    return(
+        f"""
+          SELECT `역명`, ROUND(AVG(CAST(`{timeList[0]}~{timeList[1]}` AS INT) + CAST(`{timeList[1]}~{timeList[2]}` AS INT)),0) AS `지정 평균 승객` 
+          FROM jhYearTable
+          WHERE `역명` IN ({stations_formatted}) 
+          GROUP BY `역명`;
+        """
+    )
+
+def search_complex_sql2(timeList):
+    return(
+        f"""
+        SELECT  ROUND(AVG(CAST(`{timeList[0]}~{timeList[1]}` AS INT) + CAST(`{timeList[1]}~{timeList[2]}` AS INT)),0) AS `전체 평균 승객` 
+        FROM jhYearTable
+        """
+    )
+
+def search_complex_sql3(time,stations_formatted):
+    return(
+        f"""
+          SELECT `역명`, ROUND(AVG(CAST(`{time}~{time+1}` AS INT)),0) AS `지정 평균 승객` 
+          FROM jhYearTable
+          WHERE `역명` IN ({stations_formatted}) 
+          GROUP BY `역명`;
+        """
+    )
+
+def search_complex_sql4(time):
+    return(
+        f"""
+        SELECT  ROUND(AVG(CAST(`{time}~{time+1}` AS INT)),0) AS `전체 평균 승객` 
+        FROM jhYearTable
+        """
+    )
