@@ -10,7 +10,7 @@ const App = () => {
   const itemsPerPage = 6; // 한 페이지에 보여줄 카드 개수
 
   const portfolioItems = [
-    { id: 1, title: 'Ji hwan', type: 'Spark', date: '2026-03-20', desc: 'Spark와 ai-agent(n8n)를 통한 데이터 활용(번화가 도출 및 맛집 추천)', icon: 'fa-robot', link: '/jh_spark' },
+    { id: 1, title: 'Ji hwan', type: 'Spark', date: '2026-03-20', desc: 'Spark와 AI-agent(n8n)를 통한 데이터 분석 및 활용(번화가 도출 및 맛집 추천/경로 혼잡도 비교)', icon: 'fa-robot', link: '/jh_spark' },
     { id: 2, title: 'Yun Woo', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(승하차 비율을 통한 역 성격 규명 및 혼잡도 추정)', icon: 'fa-chart-pie', link: '/yw_spark' },
     { id: 3, title: 'Ga young', type: 'Spark', date: '2026-03-20', desc: 'Spark를 활용한 데이터 적재 및 분석(어린이날 관광지 혼잡도 추정)', icon: 'fa-chart-line', link: '/gy_spark' },
 

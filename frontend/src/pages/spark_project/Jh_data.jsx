@@ -10,7 +10,7 @@ import { api, n8n_api } from "@utils/network.js";
 const Header = () => (
   <div className="bg-primary p-5 text-white text-center">
     <h2 className="fw-bold mb-2">지하철 데이터 시각화 프로젝트</h2>
-    <p className="opacity-75">서울교통공사 데이터를 활용한 혼잡도 및 맛집 분석</p>
+    <p className="opacity-75">Spark와 AI-agent(n8n)를 통한 데이터 분석 및 활용</p>
   </div>
 );
 
