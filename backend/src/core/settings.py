@@ -3,8 +3,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
   spark_url: str
   host_ip: str 
-  jdbc_url: str = "jdbc:mariadb://192.168.0.204:3306/metro_db"
-  target_table_name: str = "seoul_metro"
+  properties_user: str
+  properties_pw: str
+  jdbc_url: str
+  jdbc_url_2: str
+  target_table_name: str
+  mariadb_url: str
 
   model_config = SettingsConfigDict(
     env_file=".env",

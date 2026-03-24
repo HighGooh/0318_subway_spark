@@ -1,5 +1,5 @@
 from src.core.settings import settings
-from pyspark.sql import SparkSession, Row
+from pyspark.sql import SparkSession
 
 def conn():
     try:
@@ -23,13 +23,18 @@ def conn():
         .config("spark.jars.packages", "org.mariadb.jdbc:mariadb-java-client:3.5.7") \
         .config("spark.driver.memory", "4g") \
         .getOrCreate()
-        # .config("spark.executor.memory", "512m") \
-        # .config("spark.jars", "D:\\IDE\\workspaces\\team\\0318_subway_spark\\backend\\mariadb-java-client-3.5.7.jar") \
-        # .config("spark.executor.extraClassPath", "/opt/spark/jars/mariadb-java-client-3.5.7.jar") \
-        # .config("spark.driver.extraClassPath", "/opt/spark/jars/mariadb-java-client-3.5.7.jar") \
-        # .config("spark.sql.debug.maxToStringFields", "1000") \
         print("Spark Session Created Successfully!")
         return spark
     except Exception as e:
         print(f"Failed to create Spark session: {e}")
         return None
+
+connection_properties = {
+            "user":settings.properties_user,
+            "password":settings.properties_pw,
+            "driver": "org.mariadb.jdbc.Driver",
+            "char.encoding": "utf-8",
+            "characterEncoding": "UTF-8",
+            "useUnicode": "true",
+            "sessionVariables": "sql_mode='ANSI_QUOTES'"
+        }    
