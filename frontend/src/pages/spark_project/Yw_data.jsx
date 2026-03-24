@@ -1,39 +1,12 @@
 import "@styles/App.css";
-import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Search, Map, TrendingUp, Award } from 'lucide-react';
-import { api } from '@utils/network.js'
+// 1. 커스텀 훅 임포트
+import { useStationHistory } from '@hooks/useStationHistory';
 
 const Yw_data = () => {
-  const [station, setStation] = useState("")
-  const [clickButton, setClickButton] = useState(false)
-  const [history, setHistory] = useState([]); // 서버 데이터를 담을 상태
-  const [targetName, setTargetName] = useState(""); // 찾은 공식 역명
-  // 차트 하단에 추가할 요약 카드 로직 (변화량 계산)
-  const getChangeRate = () => {
-    if (history.length < 2) return 0;
-    const first = history[0].출근_하차비율;
-    const last = history[history.length - 1].출근_하차비율;
-    return (((last - first) / first) * 100).toFixed(1);
-  };
-
-  const buttonEvent = e => {
-    e.preventDefault()
-    if (!station) return alert("역 이름을 입력하세요");
-
-    api.get(`/station_history?station_name=${station}`)
-      .then(res => {
-        if (res.data.status) {
-          setHistory(res.data.data); // 데이터 저장
-          setTargetName(res.data.station_name); // 공식 역명 저장
-          setClickButton(true);
-          console.log(res.data)
-        } else {
-          alert("역을 찾을 수 없습니다.");
-        }
-      })
-      .catch(err => console.log(err));
-  };
+  // 2. 훅에서 필요한 변수와 함수들을 가져옵니다.
+  const { station, setStation, data, fetchHistory, changeRate } = useStationHistory();
+  const { history, targetName, loaded } = data;
 
   return (
     <div className="bg-light py-5">
@@ -45,13 +18,22 @@ const Yw_data = () => {
               <h1 className="fw-bold text-primary mb-3">지하철 성격 연대기</h1>
               <div className="input-group input-group-lg shadow-sm p-3">
                 <span className="input-group-text bg-white border-end-0"><i className="bi bi-search"></i></span>
-                <input type="text" id="stationInput" className="form-control border-start-0" name="station" value={station} onChange={e => setStation(e.target.value)} onKeyPress={e => e.key === 'Enter' && buttonEvent(e)} placeholder="역 이름을 입력하세요 (2024년 기준 1~8호선)" required />
-                <button className="btn btn-primary px-4" type="button" onClick={buttonEvent} >분석하기</button>
+                <input
+                  type="text"
+                  className="form-control border-start-0"
+                  value={station}
+                  onChange={e => setStation(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && fetchHistory()}
+                  placeholder="역 이름을 입력하세요"
+                />
+                <button className="btn btn-primary px-4" type="button" onClick={fetchHistory}>분석하기</button>
               </div>
             </div>
           </div>
+
+          {/* 데이터가 로드되었을 때만 렌더링 (clickButton 대신 loaded 사용) */}
           {
-            clickButton &&
+            loaded &&
             <div className="row g-4">
               {/* 메인 차트 영역 */}
               <div className="col-lg-8">
@@ -60,22 +42,20 @@ const Yw_data = () => {
                   {/* 1. LineChart 카드 */}
                   <div className="card p-4 shadow-sm border-0">
                     <div className="d-flex justify-content-between align-items-center mb-4">
-                      <h4 className="fw-bold mb-0">
-                        <span id="targetStation">{targetName}역</span> 17년 트렌드
-                      </h4>
+                      <h4 className="fw-bold mb-0">{targetName}역 17년 트렌드</h4>
                       <span className={`badge fs-6 ${history[history.length - 1]?.역성격 === '오피스' ? 'bg-primary' : 'bg-danger'}`}>
                         {history[history.length - 1]?.역성격}
                       </span>
                     </div>
                     <div style={{ width: '100%', height: 350 }}>
                       <ResponsiveContainer>
-                        <LineChart data={history} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <LineChart data={history}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                           <XAxis dataKey="연도" />
-                          <YAxis domain={[0, 'auto']} />
-                          <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                          <YAxis />
+                          <Tooltip />
                           <Legend verticalAlign="top" height={36} />
-                          <Line type="monotone" dataKey="출근_하차비율" name="오피스 지수" stroke="#0d6efd" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                          <Line type="monotone" dataKey="출근_하차비율" name="오피스 지수" stroke="#0d6efd" strokeWidth={3} />
                           <Line type="monotone" dataKey="출근_승차비율" name="주거 지수" stroke="#dc3545" strokeWidth={2} />
                         </LineChart>
                       </ResponsiveContainer>
@@ -145,10 +125,7 @@ const Yw_data = () => {
                   <div className="col-12">
                     <div className="card p-3 border-start border-primary border-5">
                       <small className="text-muted fw-bold">최근 하차 비율</small>
-                      <h3 className="fw-bold mt-1 text-primary">
-                        {history[history.length - 1]?.출근_하차비율}
-                      </h3>
-                      <p className="mb-0 text-muted small">2024년 기준</p>
+                      <h3 className="fw-bold mt-1 text-primary">{history[history.length - 1]?.출근_하차비율}</h3>
                     </div>
                   </div>
 
@@ -157,11 +134,8 @@ const Yw_data = () => {
                     <div className="card p-3 border-start border-danger border-5 shadow-sm">
                       <small className="text-muted fw-bold">17년 지수 변화율</small>
                       <h3 className="fw-bold mt-1 text-danger">
-                        {getChangeRate() > 0 ? `+${getChangeRate()}` : getChangeRate()}%
+                        {changeRate > 0 ? `+${changeRate}` : changeRate}%
                       </h3>
-                      <p className="mb-0 text-muted small">
-                        {getChangeRate() > 0 ? "업무 지구화 진행 중" : "주거/기타 성격 강화 중"}
-                      </p>
                     </div>
                   </div>
 
