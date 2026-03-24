@@ -8,7 +8,7 @@ export default defineConfig({
   base: "/",
   server: {
     host: '0.0.0.0',
-    port: 8001,
+    port: 80,
     allowedHosts: ['localhost', 'aiedu.tplinkdns.com'],
   },
   resolve: {

@@ -15,7 +15,7 @@ for router in routers:
 
 
 origins = [
-    "http://localhost:8001",
+    "http://localhost:80", "http://aiedu.tplinkdns.com:6010", "http://aiedu.tplinkdns.com:7240", "http://aiedu.tplinkdns.com:6090","http://aiedu.tplinkdns.com:6110"
 ]
 
 

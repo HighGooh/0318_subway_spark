@@ -1,8 +1,4 @@
-from pyspark.sql import SparkSession, Row
-from sqlalchemy import create_engine, inspect, text
-from fastapi import APIRouter, FastAPI, Request
-import pandas as pd
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter
 from typing import List
 from pydantic import BaseModel
 # from setSpark import spark
