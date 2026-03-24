@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import 'highlight.js/styles/github.css'; // 테마 선택
 import { Map, MapMarker } from "react-kakao-maps-sdk";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer, Cell } from 'recharts'
-import { api, n8n_api } from "../utils/network";
+import { api, n8n_api } from "@utils/network.js";
 
 
 

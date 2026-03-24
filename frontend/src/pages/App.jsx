@@ -2,11 +2,11 @@ import { BrowserRouter,Routes, Route } from "react-router-dom";
 import '@styles/App.css'
 import NotFound from '@pages/NotFound.jsx'
 import Home from '@pages/Home.jsx'
-import Jh_data from '@pages/Jh_data.jsx'
-import Yw_data from '@pages/Yw_data.jsx'
+import Jh_data from '@pages/spark_project/Jh_data.jsx'
+import Yw_data from '@pages/spark_project/Yw_data.jsx'
+import Gy_data from "@pages/spark_project/Gy_data.jsx";
 import Nav from '@pages/Nav.jsx'
 import '@styles/Sidebar.css';
-import Gy_data from "@pages/Gy_data.jsx";
 
 
 function App() {
