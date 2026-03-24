@@ -122,6 +122,7 @@ const Jh_data = () => {
     setDrunkSearch(null)
     setYearNum(yearSel)
     setSubWaySel(true)
+    setStationList(null)
     // axios.get('http://localhost:8002/year_select', { params: { year: yearSel } }).then(
     //   res => {
     //     if (res.data.status) {
@@ -370,11 +371,7 @@ const Jh_data = () => {
             <form onSubmit={yearSubmit} className="text-center">
               <h5 className="fw-bold mb-4 text-secondary">📅 분석 연도 설정</h5>
               <div className="d-flex justify-content-center align-items-center gap-3" style={{ maxWidth: "500px", margin: "0 auto" }}>
-                <select
-                  className="form-select form-select-lg border-2"
-                  onChange={(e) => setYearSel(e.target.value)}
-                  value={yearSel}
-                >
+                <select className="form-select form-select-lg border-2" onChange={(e) => setYearSel(e.target.value)} value={yearSel} >
                   {option.map((v, i) => (
                     <option key={i} value={v}>{v}년도 데이터</option>
                   ))}
@@ -387,11 +384,7 @@ const Jh_data = () => {
           {/* 2. 메뉴 탭 */}
           <div className={`${subWaySel ? "d-flex" : "d-none"} justify-content-center gap-2 mb-5`}>
             {progremOption.map((v, i) => (
-              <button
-                key={i}
-                className={`btn px-4 py-2 rounded-pill fw-bold transition-all ${drunkSearch === i ? "btn-dark shadow" : "btn-outline-secondary"}`}
-                onClick={() => { setDrunkSearch(i); i === 1 && getStation() }}
-              >
+              <button key={i} className={`btn px-4 py-2 rounded-pill fw-bold transition-all ${drunkSearch === i ? "btn-dark shadow" : "btn-outline-secondary"}`} onClick={() => { setDrunkSearch(i) }}>
                 {i === 0 ? "🍺 맛있는 술집 추천" : "🚉 경로 혼잡도 비교"}
               </button>
             ))}
@@ -534,11 +527,13 @@ const Jh_data = () => {
           {/* 프로젝트 2: 경로 혼잡도 */}
           {drunkSearch === 1 && (
             <div className="animate__animated animate__fadeIn">
+
               <div className="card border-0 shadow-sm rounded-4 p-4 border">
-                <h5 className="fw-bold mb-4 text-center">🚉 {yearNum}년도 환승역 및 혼잡도 분석</h5>
-                {
-                stationList &&
-                  <div className="station_wrap">
+                <div className="d-flex align-items-center justify-content-center mb-4">
+                  <h5 className="fw-bold text-center mb-0 me-3">🚉 {yearNum}년도 환승역 및 혼잡도 분석</h5>
+                  <button type="button" className="btn btn-primary px-4 fw-bold" onClick={() => getStation()}>환승역 검색</button>
+                </div>
+                  <div className={`station_wrap ${stationList? "": "d-none"}`}>
                     <div className="row g-3 mb-4">
                       <div className="col-md-6">
                         <div className="p-3 bg-light rounded-3">
@@ -598,8 +593,7 @@ const Jh_data = () => {
                       </div>
                     )}
                   </div>
-                }
-
+                  <p className={`loading_chat text-center mt-3 ${stationLoad ? "" : "d-none"}`}>데이터를 수집 중 <span>•</span><span>•</span><span>•</span></p>
                 {complexTotalData[0] && (
                   <div className="mt-4 p-3 bg-white rounded-4 border shadow-sm">
                     <ComplexComparisonChart complexData={complexData} complexTotalData={complexTotalData} />
