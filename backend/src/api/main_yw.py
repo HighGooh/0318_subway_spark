@@ -2,9 +2,10 @@ from fastapi import APIRouter
 from sqlalchemy import create_engine, text
 import pandas as pd
 
-from src.core.spark import conn
+from src.core.spark import conn, connection_properties
 from pyspark.sql.functions import regexp_replace
 from src.core.queries import get_analysis_sql, get_comment_optimization_sql, get_union_part_sql, STATION_SEARCH_SQL, STATION_CODE_SQL, get_station_history_sql
+from src.core.settings import settings
 
 router = APIRouter(tags=["yoonwoo"])
 
@@ -14,8 +15,8 @@ ANALYSIS_PARAMS = {
     "home_min": 2.0, "home_sub": 1.3, "home_ext": 4.0
 }
 
-# DB 연결 정보
-DB_URL_FLOW = 'mysql+pymysql://root:1234@192.168.0.204:3306/metro_flow'
+# DB 엔진 객체 생성
+engine_mariadb = create_engine(settings.mariadb_url)
 
 @router.get('/fromdb')
 def fromdb(year: str, external_spark=None):
@@ -23,18 +24,9 @@ def fromdb(year: str, external_spark=None):
   spark= external_spark if external_spark else conn()
   if not spark:
     return {"status": False, "error": "Spark session not initialized"}
-  try:
-    connection_properties = {
-            "user": "root",
-            "password": "1234",
-            "driver": "org.mariadb.jdbc.Driver",
-            "char.encoding": "utf-8",
-            "characterEncoding": "UTF-8",
-            "useUnicode": "true",
-            "sessionVariables": "sql_mode='ANSI_QUOTES'"
-        }    
-    query = f"(select * from `seoul_metro` where `날짜` like '{year}%') as tmp"
-    spDf = spark.read.jdbc(url='jdbc:mariadb://192.168.0.204:3306/edu', table=query, properties= connection_properties)
+  try:   
+    condition_list = [f"`날짜` >= '{year}-01-01' AND `날짜` < '{year}-07-01'", f"`날짜` >= '{year}-07-01' AND `날짜` < '{int(year)+1}-01-01'"]
+    spDf = spark.read.jdbc(url=settings.jdbc_url_2, table=settings.target_table_name, predicates=condition_list , properties= connection_properties)
     # 역명에서 (역번호) 제거
     spDf = spDf.withColumn("역명", regexp_replace("역명", r"\(\d+\)", ""))
     spDf.createOrReplaceTempView("temp_analysis_target")
@@ -44,8 +36,6 @@ def fromdb(year: str, external_spark=None):
     analysis_pandas_df = result_df.toPandas()
     # 저장할 새 테이블 이름 설정
     new_table_name = f"metro_flow_{year}"
-    # DB 연결 엔진 생성 (기존 engine_mariadb를 그대로 사용하거나 새로 생성)
-    engine_mariadb = create_engine('mysql+pymysql://root:1234@192.168.0.204:3306/metro_flow')
     # DB에 저장, if_exists='replace': 이미 테이블이 있으면 지우고 새로 만듦, index=False: Pandas의 인덱스 번호는 저장하지 않음
     analysis_pandas_df.to_sql(name=new_table_name, con=engine_mariadb, if_exists='replace', index=False)
     # 타입 최적화 및 컬럼 코멘트 추가
@@ -88,13 +78,12 @@ def analyze_all_years():
 @router.get('/create_integrated_view')
 def create_integrated_view():
     # 17개년 데이터를 역번호 기준으로 합산하여 중복을 제거한 통합 뷰 생성
-    engine_flow = create_engine(DB_URL_FLOW)
     years = [str(y) for y in range(2008, 2025)]
     # 쿼리 조립 (파라미터 바인딩 준비)
     try:
         union_queries = [get_union_part_sql(year) for year in years]
         full_query = "CREATE OR REPLACE VIEW `v_metro_analysis_all` AS " + " UNION ALL ".join(union_queries)
-        with engine_flow.connect() as conn_db:
+        with engine_mariadb.connect() as conn_db:
             # text()와 파라미터를 함께 전달하여 안전하게 실행
             conn_db.execute(text(full_query), ANALYSIS_PARAMS)
             conn_db.commit()
@@ -105,9 +94,8 @@ def create_integrated_view():
 @router.get('/station_history')
 def get_station_history(station_name: str):
     # 이름 검색하면 최신년도 역번호 찾아 17년치 변화 반환
-    engine_flow = create_engine(DB_URL_FLOW)
     try:
-        with engine_flow.connect() as conn_db:
+        with engine_mariadb.connect() as conn_db:
             # 1단계: 가장 적절한 역명 찾기
             search_res = conn_db.execute(text(STATION_SEARCH_SQL), {"name": f"%{station_name}%", "raw_name": station_name}).fetchone()
             if not search_res:

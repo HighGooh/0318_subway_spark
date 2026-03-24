@@ -120,3 +120,18 @@ def get_station_history_sql():
         GROUP BY `연도`
         ORDER BY `연도` ASC
     """
+
+# 어린이날 데이터 수집 SQL
+KIDSDAY_SEARCH_SQL = """
+            SELECT `역명`, `날짜`, `구분`, `합계`, `순위`
+            FROM (
+                SELECT `역명`, `날짜`, `구분`,
+                (CAST(`10~11` AS INT) + CAST(`11~12` AS INT) + CAST(`12~13` AS INT)) as `합계`,
+                ROW_NUMBER() OVER (
+                    ORDER BY (CAST(`10~11` AS INT) + CAST(`11~12` AS INT) + CAST(`12~13` AS INT)) DESC
+                ) as `순위`
+                FROM kidsDayTable
+            ) tmp
+            WHERE `순위` <= 5
+            ORDER BY `날짜` ASC, `합계` DESC
+        """

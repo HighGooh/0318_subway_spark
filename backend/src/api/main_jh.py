@@ -1,28 +1,14 @@
-from pyspark.sql import SparkSession, Row
-from sqlalchemy import create_engine, inspect, text
-from fastapi import APIRouter, FastAPI, Request
-import pandas as pd
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter
 from typing import List
 from pydantic import BaseModel
-# from setSpark import spark
-from src.core.spark import conn
-from src.core.settings import settings
 
+from src.core.spark import conn, connection_properties
+from src.core.settings import settings
 
 router = APIRouter(tags=["jihwan"])
 
 def getMetros(spark, year:str):
   try:
-    connection_properties = {
-      "user": "root",
-      "password": "1234",
-      "driver": "org.mariadb.jdbc.Driver",
-      "char.encoding": "utf-8",
-      "characterEncoding": "UTF-8",
-      "useUnicode": "true",
-      "sessionVariables": "sql_mode='ANSI_QUOTES'"
-    }
     condition_list = [ f"날짜 <= '{year}-01-01'", f"날짜 >= '{year}-12-31'" ]
     spDf = spark.read.jdbc(url=settings.jdbc_url, table=settings.target_table_name, predicates=condition_list, properties=connection_properties)
     spDf.createOrReplaceTempView("jhYearTable")
