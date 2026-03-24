@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import "@styles/App.css";
-import axios from "axios";
 import ReactMarkdown from 'react-markdown';
 import 'highlight.js/styles/github.css'; // 테마 선택
 import { Map, MapMarker } from "react-kakao-maps-sdk";
