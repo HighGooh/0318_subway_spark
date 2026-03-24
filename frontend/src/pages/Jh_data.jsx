@@ -136,7 +136,7 @@ const Jh_data = () => {
   }
 
   const searchDrunkList = () => {
-    axios.get('http://localhost:8002/drunk_info').then(
+    axios.get('http://localhost:8002/drunk_info', { params: { year: yearNum } }).then(
       res => {
         if (res.data.status) {
           alert('데이터 수집 완료')
@@ -270,19 +270,17 @@ const Jh_data = () => {
     setTStation(null)
     setComplexData([])
     setComplexTotalData([])
+    setStationList(null)
     axios.get('http://localhost:8002/get_station', { params: { year: yearNum } }).then(
       res => {
         if (res.data.status) {
           alert('데이터 수집 완료')
           setStationList(res.data.data)
           setStationLoad(false)
+          // setStart_st_list(res.data.data)
+          // setFinish_st_list(res.data.data)
           setStart_st(res.data.data[0])
           setFinish_st(res.data.data[0])
-        }
-        else {
-          alert('오류가 발생했습니다.')
-          setStationLoad(false)
-          setDrunkSearch(null)
         }
       }
     ).catch(err => {
@@ -292,14 +290,14 @@ const Jh_data = () => {
       setDrunkSearch(null)
     })
   }
-
+  console.log(start_st_list, finish_st_list)
   const stationList_start = (e) => {
-
     if (e) {
       setStart_st_list(stationList.filter((v) => v.includes(e)))
     } else {
       setStart_st_list([...stationList])
     }
+
 
   }
 
@@ -317,7 +315,6 @@ const Jh_data = () => {
     if (finish_st_list) setFinish_st(finish_st_list[0])
   }, [start_st_list, finish_st_list])
 
-  console.log(start_st, finish_st)
 
   const station_search = (e) => {
     e.preventDefault()
@@ -341,7 +338,7 @@ const Jh_data = () => {
     e.preventDefault()
     setComplexData([])
     setComplexTotalData([])
-    const item = { start_st: start_st, finish_st: finish_st, stations: tStation, time: timeSelect }
+    const item = { start_st: start_st, finish_st: finish_st, stations: tStation, time: timeSelect, year: yearNum }
 
     axios
       .post("http://localhost:8002/search_complex", item)
@@ -538,66 +535,70 @@ const Jh_data = () => {
           {drunkSearch === 1 && (
             <div className="animate__animated animate__fadeIn">
               <div className="card border-0 shadow-sm rounded-4 p-4 border">
-                <h5 className="fw-bold mb-4 text-center">🚉 환승역 및 혼잡도 분석</h5>
-
-                <div className="row g-3 mb-4">
-                  <div className="col-md-6">
-                    <div className="p-3 bg-light rounded-3">
-                      <label className="fw-bold mb-2">출발역 검색</label>
-                      <input className="form-control mb-2" value={start_st_input} onChange={(e) => { setStart_st_input(e.target.value); stationList_start(e.target.value) }} placeholder="역명을 입력하세요..." />
-                      <select className="form-select border-primary" value={start_st} onChange={(e) => setStart_st(e.target.value)}>
-                        {(start_st_list || stationList || []).map((v, i) => <option key={i} value={v}>{v}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <div className="p-3 bg-light rounded-3">
-                      <label className="fw-bold mb-2">도착역 검색</label>
-                      <input className="form-control mb-2" value={finish_st_input} onChange={(e) => { setFinish_st_input(e.target.value); stationList_finish(e.target.value) }} placeholder="역명을 입력하세요..." />
-                      <select className="form-select border-success" value={finish_st} onChange={(e) => setFinish_st(e.target.value)}>
-                        {(finish_st_list || stationList || []).map((v, i) => <option key={i} value={v}>{v}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-center mb-5">
-                  <button onClick={station_search} className="btn btn-dark btn-lg px-5 rounded-pill shadow">환승 경로 탐색</button>
-                </div>
-
-                {tStation && (
-                  <div className="bg-light rounded-4 p-4 mb-4">
-                    <div className="d-flex flex-column flex-md-row align-items-center gap-4">
-                      <div className="bg-white p-3 rounded-3 shadow-sm text-center" style={{ minWidth: "150px" }}>
-                        <span className="text-muted small d-block">전체 경로</span>
-                        <strong className="text-primary">{tStation.length}개 지점</strong>
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="d-flex flex-wrap gap-2">
-                          {tStation.map((v, i) => (
-                            <span key={i} className="badge bg-white text-dark border p-2 fw-normal shadow-sm" style={{ fontSize: "16px" }}>{v}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 border-top pt-4">
-                      <form onSubmit={search_complex} className="row g-3 align-items-center justify-content-center">
-                        <div className="col-auto">
-                          <label className="fw-bold">⏰ 출발 시간대 선택:</label>
-                        </div>
-                        <div className="col-auto">
-                          <select className="form-select w-auto" onChange={(e) => setTimeSelect(e.target.value)} value={timeSelect}>
-                            {timeList.map((v, i) => <option key={i} value={v}>{v}:00</option>)}
+                <h5 className="fw-bold mb-4 text-center">🚉 {yearNum}년도 환승역 및 혼잡도 분석</h5>
+                {
+                stationList &&
+                  <div className="station_wrap">
+                    <div className="row g-3 mb-4">
+                      <div className="col-md-6">
+                        <div className="p-3 bg-light rounded-3">
+                          <label className="fw-bold mb-2">출발역 검색</label>
+                          <input className="form-control mb-2" value={start_st_input} onChange={(e) => { setStart_st_input(e.target.value); stationList_start(e.target.value) }} placeholder="역명을 입력하세요..." />
+                          <select className="form-select border-primary" value={start_st} onChange={(e) => setStart_st(e.target.value)}>
+                            {(start_st_list || stationList || []).map((v, i) => <option key={i} value={v}>{v}</option>)}
                           </select>
                         </div>
-                        <div className="col-auto">
-                          <button type='submit' className="btn btn-primary px-4">비율 분석하기</button>
+                      </div>
+                      <div className="col-md-6">
+                        <div className="p-3 bg-light rounded-3">
+                          <label className="fw-bold mb-2">도착역 검색</label>
+                          <input className="form-control mb-2" value={finish_st_input} onChange={(e) => { setFinish_st_input(e.target.value); stationList_finish(e.target.value) }} placeholder="역명을 입력하세요..." />
+                          <select className="form-select border-success" value={finish_st} onChange={(e) => setFinish_st(e.target.value)}>
+                            {(finish_st_list || stationList || []).map((v, i) => <option key={i} value={v}>{v}</option>)}
+                          </select>
                         </div>
-                      </form>
+                      </div>
                     </div>
+
+                    <div className="text-center mb-5">
+                      <button onClick={station_search} className="btn btn-dark btn-lg px-5 rounded-pill shadow">환승 경로 탐색</button>
+                    </div>
+
+                    {tStation && (
+                      <div className="bg-light rounded-4 p-4 mb-4">
+                        <div className="d-flex flex-column flex-md-row align-items-center gap-4">
+                          <div className="bg-white p-3 rounded-3 shadow-sm text-center" style={{ minWidth: "150px" }}>
+                            <span className="text-muted small d-block">전체 경로</span>
+                            <strong className="text-primary">{tStation.length}개 지점</strong>
+                          </div>
+                          <div className="flex-grow-1">
+                            <div className="d-flex flex-wrap gap-2">
+                              {tStation.map((v, i) => (
+                                <span key={i} className="badge bg-white text-dark border p-2 fw-normal shadow-sm" style={{ fontSize: "16px" }}>{v}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 border-top pt-4">
+                          <form onSubmit={search_complex} className="row g-3 align-items-center justify-content-center">
+                            <div className="col-auto">
+                              <label className="fw-bold">⏰ 출발 시간대 선택:</label>
+                            </div>
+                            <div className="col-auto">
+                              <select className="form-select w-auto" onChange={(e) => setTimeSelect(e.target.value)} value={timeSelect}>
+                                {timeList.map((v, i) => <option key={i} value={v}>{v}:00</option>)}
+                              </select>
+                            </div>
+                            <div className="col-auto">
+                              <button type='submit' className="btn btn-primary px-4">비율 분석하기</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                }
 
                 {complexTotalData[0] && (
                   <div className="mt-4 p-3 bg-white rounded-4 border shadow-sm">
