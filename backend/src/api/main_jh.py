@@ -7,15 +7,30 @@ from src.core.settings import settings
 
 router = APIRouter(tags=["jihwan"])
 
-def getMetros(spark, year:str):
-  try:
-    condition_list = [ f"날짜 <= '{year}-01-01'", f"날짜 >= '{year}-12-31'" ]
-    spDf = spark.read.jdbc(url=settings.jdbc_url, table=settings.target_table_name, predicates=condition_list, properties=connection_properties)
-    spDf.createOrReplaceTempView("jhYearTable")
-    return True
-  except Exception as e:
-    print(f"Failed to create Spark session: {e}")
-    return False
+def getMetros(spark, year: str):
+    try:
+        # 1. 필터링된 테이블 정의 (서브쿼리 방식)
+        # predicates 대신 이 방식을 쓰면 DB단에서 필터링 후 가져오므로 훨씬 빠릅니다.
+        pushdown_query = f"""
+            (SELECT * FROM {settings.target_table_name} 
+             WHERE 날짜 >= '{year}-01-01' AND 날짜 <= '{year}-12-31') AS jh_filtered
+        """
+
+        # 2. 데이터 읽기
+        spDf = spark.read.jdbc(
+            url=settings.jdbc_url, 
+            table=pushdown_query, 
+            properties=connection_properties
+        )
+
+        # 3. 뷰 생성
+        spDf.createOrReplaceTempView("jhYearTable")
+        return True
+
+    except Exception as e:
+        # 백엔드 개발 시 에러 로그는 더 상세히 남기는 것이 좋습니다.
+        print(f"Error loading MariaDB to Spark: {e}")
+        return False
 
 @router.get('/drunk_info')
 def drunk_info(year:str):

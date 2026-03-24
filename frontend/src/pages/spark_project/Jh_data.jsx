@@ -6,8 +6,6 @@ import { Map, MapMarker } from "react-kakao-maps-sdk";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer, Cell } from 'recharts'
 import { api, n8n_api } from "@utils/network.js";
 
-
-
 //header 컴포넌트
 const Header = () => (
   <div className="bg-primary p-5 text-white text-center">
