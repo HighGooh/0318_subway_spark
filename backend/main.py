@@ -15,7 +15,7 @@ for router in routers:
 
 
 origins = [
-    "http://localhost:5173",
+    "http://localhost:8001",
 ]
 
 
