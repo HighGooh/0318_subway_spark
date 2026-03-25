@@ -1,4 +1,38 @@
 services:
+  web-main:
+    image: nginx:1.28
+    container_name: web-main
+    ports:
+      - 80:80
+    volumes:
+      - ./config:/etc/nginx/conf.d:ro
+      - ./main:/usr/share/nginx/html:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - spark-network
+
+  frontend:
+    image: nginx:1.28
+    container_name: frontend
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./frontend/config:/etc/nginx/conf.d:ro
+    networks:
+      - spark-network      
+
+
+  backend:
+    image: uv:1
+    container_name: backend
+    volumes:
+      - ./backend:/workspace
+    command: ["uv", "run", "fastapi", "run", "--proxy-headers", "--forwarded-allow-ips", "'*'"]
+    networks:
+      - spark-network      
+
+
   spark-master:
     image: apache/spark:4.1.1-java21-python3
     container_name: spark-master
@@ -13,7 +47,7 @@ services:
       - SPARK_SSL_ENABLED=no
     ports:
       - "8080:8080"
-      - "7077:7077"
+      
     networks:
       - spark-network
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
