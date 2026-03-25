@@ -47,7 +47,6 @@ services:
       - SPARK_SSL_ENABLED=no
     ports:
       - "8080:8080"
-      
     networks:
       - spark-network
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
@@ -84,6 +83,40 @@ services:
       - spark-network
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
 
+  n8n_ai_agent:
+    image: docker.n8n.io/n8nio/n8n:2.7.3
+    container_name: n8n_ai_agent
+    environment:
+      # - N8N_PATH=/n8n/
+      - N8N_HOST=aiedu.tplinkdns.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      # - WEBHOOK_URL=http://n8n_ai_agent:5678
+      - WEBHOOK_URL=http://aiedu.tplinkdns.com:6010/n8n/
+      - N8N_SECURE_COOKIE=false
+      - TZ=Asia/Seoul
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - LC_ALL=en_US.UTF-8
+    # ports:
+    #   - 8001:5678
+    volumes:
+      - n8n_storage:/home/node/.n8n
+    networks:
+      - spark-network
+
+  n8n_postgres:
+    image: postgres:18.3
+    container_name: n8n_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+      - TZ=Asia/Seoul
+    # volumes:
+    #   - ./n8n/postgres:/var/lib/postgresql/18/main
+    networks:
+      - spark-network
+
 networks:
   spark-network:
     driver: bridge
@@ -91,4 +124,4 @@ networks:
 volumes:
   spark-work-1:
   spark-work-2:
-  
+  n8n_storage:
