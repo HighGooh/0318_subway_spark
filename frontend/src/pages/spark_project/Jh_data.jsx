@@ -6,7 +6,7 @@ import 'highlight.js/styles/github.css'; // 테마 선택
 import { Map, MapMarker } from "react-kakao-maps-sdk";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer, Cell } from 'recharts'
 import { api, n8n_api } from "@utils/network.js";
-
+import axios from "axios"
 
 //header 컴포넌트
 const Header = () => (
@@ -551,9 +551,8 @@ const Send = (e) => {
   }
 
   const item = { input, yearNum };
-
-  n8n_api
-    .post("/webhook/drunk", item)
+  axios //n8n_api
+    .post("/n8n/webhook/drunk", item)
     .then((res) => {
       const { info, where, name } = messageReform(res.data["result"]);
       setPlaceList([...where]);
