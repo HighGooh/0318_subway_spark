@@ -3,7 +3,7 @@ import { api } from '@utils/network.js';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // 연도 배열
-const YEARS = ['%', ...Array.from({ length: 15 }, (_, i) => (2022 - i).toString())];
+const YEARS = ['%', ...Array.from({ length: 15 }, (_, i) => (2024 - i).toString())];
 
 // 로딩 화면
 const LoadingView = ({ message }) => (
@@ -140,7 +140,14 @@ const Gy_data = () => {
     api.get('/kidsDayStation', { params: { search: search } })
       .then(res => {
         setSearchData(res.data.data);
-      })
+        const resultData = res.data.data;
+        if ( resultData.length === 0) {
+        alert(`'${search}'에 대한 검색 결과가 없습니다. 정확한 역명을 입력해주세요! 🦕`);
+        setSearchData([]);
+        setSearch("");
+      } else {
+        setSearchData(resultData);
+      }})
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
   };

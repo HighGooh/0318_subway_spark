@@ -27,7 +27,6 @@ const Yw_data = () => {
           setHistory(res.data.data); // 데이터 저장
           setTargetName(res.data.station_name); // 공식 역명 저장
           setClickButton(true);
-          console.log(res.data)
         } else {
           alert("역을 찾을 수 없습니다.");
         }
@@ -42,7 +41,7 @@ const Yw_data = () => {
           {/* 검색 섹션 */}
           <div className="row mb-4 justify-content-center">
             <div className="col-md-8 text-center">
-              <h1 className="fw-bold text-primary mb-3">지하철 성격 연대기</h1>
+              <h1 className="fw-bold text-primary mb-3">지하철 성격 연대기🚇</h1>
               <div className="input-group input-group-lg shadow-sm p-3">
                 <span className="input-group-text bg-white border-end-0"><i className="bi bi-search"></i></span>
                 <input type="text" id="stationInput" className="form-control border-start-0" name="station" value={station} onChange={e => setStation(e.target.value)} onKeyPress={e => e.key === 'Enter' && buttonEvent(e)} placeholder="역 이름을 입력하세요 (2024년 기준 1~8호선)" required />
@@ -86,7 +85,7 @@ const Yw_data = () => {
                   <div className="card p-4 shadow-sm border-0">
                     <h5 className="fw-bold mb-4 text-dark">
                       <i className="bi bi-people-fill text-success me-2"></i>
-                      연도별 출근 시간대 유동 인구 (규모)
+                      👨‍💼연도별 출근 시간대 유동 인구 (규모)👩‍💼
                     </h5>
                     <div style={{ width: '100%', height: 300 }}> {/* 이 높이값이 중요합니다! */}
                       <ResponsiveContainer>

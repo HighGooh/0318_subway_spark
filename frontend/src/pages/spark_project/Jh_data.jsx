@@ -194,7 +194,7 @@ const DrunkChart = ({ drunkList, chartStyles }) => {
 
   return (
     <div style={chartStyles.container}>
-      <h3 style={chartStyles.title}>역별 야간 평균 이용객 순위</h3>
+      <h3 style={chartStyles.title}>역별 야간 평균 이용객 순위 🌙</h3>
       <ResponsiveContainer width="100%" height="90%">
         <BarChart data={drunkList} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
