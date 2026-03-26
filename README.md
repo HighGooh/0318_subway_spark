@@ -320,7 +320,7 @@ order by `년도`;
 - **Result** 사용자 경험(UX) 측면에서 매끄러운 화면 전환과 정확한 데이터 시각화 구현.
 
 ### 3. API 통신 중 사용자 부정 조작 방지 (UX Optimization)
- **Problem** 데이터 량이 많아 API 응답이 지연되는 동안 사용자가 검색어를 수정하거나 검색 버튼을 연타하여 중복 요청(Race Condition)이 발생하는 문제 확인.
+- **Problem** 데이터 량이 많아 API 응답이 지연되는 동안 사용자가 검색어를 수정하거나 검색 버튼을 연타하여 중복 요청(Race Condition)이 발생하는 문제 확인.
 
 - **Solution** isLoading 상태값에 따라 인풋박스는 readOnly 속성을, 검색 버튼은 disabled 속성을 부여하여 통신 중에는 입력을 제한함.
 
