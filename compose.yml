@@ -22,16 +22,14 @@ services:
     networks:
       - spark-network      
 
-
   backend:
-    image: uv:1
+    image: uv:2
     container_name: backend
     volumes:
       - ./backend:/workspace
     command: ["uv", "run", "fastapi", "run", "--proxy-headers", "--forwarded-allow-ips", "'*'"]
     networks:
       - spark-network      
-
 
   spark-master:
     image: apache/spark:4.1.1-java21-python3
@@ -93,13 +91,13 @@ services:
       - N8N_PROTOCOL=http
       - NODE_ENV=production
       # - WEBHOOK_URL=http://n8n_ai_agent:5678
-      - WEBHOOK_URL=http://aiedu.tplinkdns.com:6010/n8n/
+      - WEBHOOK_URL=http://aiedu.tplinkdns.com:7240/n8n/
       - N8N_SECURE_COOKIE=false
       - TZ=Asia/Seoul
       - GENERIC_TIMEZONE=Asia/Seoul
       - LC_ALL=en_US.UTF-8
-    # ports:
-    #   - 8001:5678
+    ports:
+      - 8001:5678
     volumes:
       - n8n_storage:/home/node/.n8n
     networks:
@@ -117,6 +115,21 @@ services:
     networks:
       - spark-network
 
+  db:
+    image: mariadb:12.1.2
+    container_name: db
+    environment:
+      - MARIADB_HOST=localhost
+      - MARIADB_PORT=3306
+      - MARIADB_ROOT_PASSWORD=1234
+      # - MARIADB_DATABASE=edu
+      - TZ=Asia/Seoul
+      - LC_ALL:en_US.UTF-8
+    volumes:
+      - data-mariadb:/var/lib/mysql:rw
+    networks:
+      - spark-network
+
 networks:
   spark-network:
     driver: bridge
@@ -125,3 +138,5 @@ volumes:
   spark-work-1:
   spark-work-2:
   n8n_storage:
+  data-mariadb:
+    external: true

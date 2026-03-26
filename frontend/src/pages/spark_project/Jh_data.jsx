@@ -719,8 +719,8 @@ const station_search = (e) => {
   setComplexTotalData([]);
   setStationSearchLoad(true);
   const item = { "출발역": start_st, "도착역": finish_st, "연도": yearNum};
-  n8n_api
-    .post("/webhook/station", item)
+  axios
+    .post("/n8n/webhook/station", item)
     .then((res) => {
       setTStation(messageReform(res.data["result"]));
       setStationSearchLoad(false);
