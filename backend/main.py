@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from src.api import main_jh, main_yw, main_gy
 
 
-app = FastAPI()
+app = FastAPI(root_path="/api")
 
 routers = [main_jh, main_yw, main_gy]
 
