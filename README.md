@@ -272,6 +272,7 @@ Ref: metro_flow_2024.역번호 < metro_flow_view.역번호
 
 ## 📊 실시간 시각화 대시보드
 ![Chart](./images/chart_gy.png)
+![Chart](./images/chart_gy_1.png)
 - Recharts를 활용해 특정 시간대의 하차 인원 수 순위를 직관적인 그래프로 구현.
 
 ## 🔍 핵심 쿼리 로직 (Core Logic)
