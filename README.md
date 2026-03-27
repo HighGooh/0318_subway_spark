@@ -1,18 +1,7 @@
-# 0318
 
-1. 기간
-진행 : 3/20(금) 8교시까지
-발표 : 3/23(월)
-
-2. 주요 수행 내용
-데이터 처리 : 스파크 이용 - 지하철 유동인구 데이터
-시각화 : 리액트 이용  
-문서 작업 : 기능 정의서, 기술 스택 정리, WBS, PPT
-
-3. 진행 계획
-3/18(수) : 스파크(pyspark) 이용 순유입량 및 역 성격 데이터 적재
-3/19(목) : 시각화 / 분석 정리
-3/20(금) : 프로젝트 보완 / ppt 작성, 발표 준비
+![Architecture](./images/System_Architecture.png)
+![Architecture](./images/System_Architecture_Diagram.png)
+![WBS](./images/WBS.jpg)
 
 <br/>
 <br/>
