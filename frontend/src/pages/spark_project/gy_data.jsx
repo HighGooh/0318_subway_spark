@@ -3,7 +3,7 @@ import { api } from '@utils/network.js';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // 연도 배열
-const YEARS = ['%', ...Array.from({ length: 15 }, (_, i) => (2024 - i).toString())];
+const YEARS = ['%', ...Array.from({ length: 17 }, (_, i) => (2024 - i).toString())];
 
 // 로딩 화면
 const LoadingView = ({ message }) => (

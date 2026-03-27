@@ -26,7 +26,7 @@ def fromdb(year: str, external_spark=None):
     return {"status": False, "error": "Spark session not initialized"}
   try:   
     condition_list = [f"`날짜` >= '{year}-01-01' AND `날짜` < '{year}-07-01'", f"`날짜` >= '{year}-07-01' AND `날짜` < '{int(year)+1}-01-01'"]
-    spDf = spark.read.jdbc(url=settings.jdbc_url_2, table=settings.target_table_name, predicates=condition_list , properties= connection_properties)
+    spDf = spark.read.jdbc(url=settings.jdbc_url, table=settings.target_table_name, predicates=condition_list , properties= connection_properties)
     # 역명에서 (역번호) 제거
     spDf = spDf.withColumn("역명", regexp_replace("역명", r"\(\d+\)", ""))
     spDf.createOrReplaceTempView("temp_analysis_target")

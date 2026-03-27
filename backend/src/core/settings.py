@@ -6,7 +6,6 @@ class Settings(BaseSettings):
   properties_user: str
   properties_pw: str
   jdbc_url: str
-  jdbc_url_2: str
   target_table_name: str
   mariadb_url: str
 
